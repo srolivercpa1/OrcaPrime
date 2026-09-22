@@ -2,7 +2,7 @@
 
 ## Resultado
 
-**Projeto-fonte implementado e testado localmente. A entrega operacional completa exigida no item 44 ainda NÃO foi atingida.** Não foram produzidos `OrcaPrime.exe` ou `OrcaPrime-Setup.exe`, não houve publicação no GitHub e o servidor não foi implantado.
+**Projeto publicado em https://github.com/srolivercpa1/OrcaPrime e 36 testes aprovados no Windows do GitHub Actions. A entrega operacional completa exigida no item 44 ainda NÃO foi atingida.** O build parou porque ORCAPRIME_LICENSE_URL e ORCAPRIME_PUBLIC_KEY estão vazias. Não foram produzidos `OrcaPrime.exe` ou `OrcaPrime-Setup.exe`; a Release foi corretamente ignorada. A implantação do servidor continua pendente.
 
 ## Evidências desta sessão
 
@@ -68,3 +68,9 @@ O usuário corrigiu o destino para `git@github.com:mateuscpa2026/orca-facil.git`
 ## Novo repositório autorizado
 
 Destino atualizado pelo usuário: https://github.com/srolivercpa1/OrcaPrime . A conexão confirmou push=true e admin=true. Projeto preparado para publicação nesse destino. O histórico de falhas de acesso acima refere-se aos repositórios anteriores. Build Windows e implantação permanecem pendentes até execução verificada.
+
+## Execução Windows confirmada
+
+Workflow: https://github.com/srolivercpa1/OrcaPrime/actions/runs/35764987342 . Commit testado: 80d181b42dd91eebd6fe8d2cb7983c0ea8edd748. Job test: sucesso, 36 passed. Job build: os 36 testes passaram novamente; configure_client.py encerrou com ValueError porque o endereço HTTPS está vazio. O log confirmou ambas as Variables vazias. Job release: skipped; nenhum instalador foi publicado. Corrigido previamente o cache do setup-python para requirements-*.txt.
+
+Ação necessária: implantar o servidor conforme SERVIDOR.md e preencher as duas Variables públicas em Settings → Secrets and variables → Actions → Variables. Depois executar Run workflow em main; a Release é publicada automaticamente se o build terminar com sucesso.
