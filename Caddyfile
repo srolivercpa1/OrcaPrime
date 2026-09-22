@@ -1,0 +1,6 @@
+{$ORCAPRIME_PUBLIC_ORIGIN} {
+    request_body {
+        max_size 16KB
+    }
+    reverse_proxy licenses:8000
+}

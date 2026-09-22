@@ -1,0 +1,4 @@
+cryptography==50.0.1
+reportlab==5.0.1
+pillow==12.3.0
+requests==2.34.2

@@ -1,0 +1,75 @@
+name: Testes e instalador OrçaPrime
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Instalar dependências de teste e build
+        run: python -m pip install -r requirements-dev.txt
+      - name: Testar regras, API, cliente e interface
+        run: python -m pytest -q
+  build:
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: windows-latest
+    env:
+      ORCAPRIME_LICENSE_URL: ${{ vars.ORCAPRIME_LICENSE_URL }}
+      ORCAPRIME_PUBLIC_KEY: ${{ vars.ORCAPRIME_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements-dev.txt
+      - name: Preparar Inno Setup
+        shell: pwsh
+        run: |
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw 'Falha ao instalar Inno Setup.' }
+          }
+      - name: Gerar executável, instalador e checksum
+        shell: pwsh
+        run: ./scripts/build_windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OrcaPrime-Windows
+          path: |
+            release/OrcaPrime-Setup.exe
+            release/OrcaPrime-Setup.exe.sha256
+          if-no-files-found: error
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: OrcaPrime-Windows
+          path: release
+      - name: Publicar Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --title "OrçaPrime $RELEASE_TAG" --notes "Instalador Windows do OrçaPrime e checksum SHA-256."
+          fi
+          gh release upload "$RELEASE_TAG" release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 --clobber

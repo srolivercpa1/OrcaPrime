@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!requirements-server.txt
+!licensing/
+!licensing/**
+licensing/__pycache__/

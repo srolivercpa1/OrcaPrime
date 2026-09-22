@@ -1,0 +1,4 @@
+Copyright (c) 2026 Mateus Oliveira — OLIVERTECH SOLUÇÕES.
+Todos os direitos reservados.
+
+OrçaPrime é software proprietário. O fornecimento deste código ao proprietário do projeto não concede a terceiros autorização para copiar, redistribuir ou comercializar o produto. Bibliotecas de terceiros permanecem sujeitas às suas próprias licenças.
