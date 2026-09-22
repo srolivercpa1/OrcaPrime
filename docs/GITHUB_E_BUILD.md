@@ -77,3 +77,8 @@ Get-FileHash .\OrcaPrime-Setup.exe -Algorithm SHA256
 ```
 
 Compare com o arquivo `.sha256` da mesma Release.
+
+
+## Publicação automática em main
+
+Após testes e build aprovados, o workflow também publica a versão de `orcaprime/__init__.py` quando executado em main, criando a tag no commit testado. Releases existentes nunca são substituídas automaticamente. Para nova entrega, incremente a versão antes do push.

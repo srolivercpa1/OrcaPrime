@@ -16,6 +16,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+          cache-dependency-path: requirements-*.txt
       - name: Instalar dependências de teste e build
         run: python -m pip install -r requirements-dev.txt
       - name: Testar regras, API, cliente e interface
@@ -33,6 +34,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
+          cache-dependency-path: requirements-*.txt
       - run: python -m pip install -r requirements-dev.txt
       - name: Preparar Inno Setup
         shell: pwsh
@@ -53,12 +55,13 @@ jobs:
             release/OrcaPrime-Setup.exe.sha256
           if-no-files-found: error
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: OrcaPrime-Windows
@@ -67,9 +70,16 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_REF: ${{ github.ref }}
+          RELEASE_SHA: ${{ github.sha }}
         run: |
-          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release create "$RELEASE_TAG" --verify-tag --title "OrçaPrime $RELEASE_TAG" --notes "Instalador Windows do OrçaPrime e checksum SHA-256."
+          if [[ "$RELEASE_REF" == refs/tags/* ]]; then
+            RELEASE_TAG="${RELEASE_REF#refs/tags/}"
+          else
+            RELEASE_TAG="v$(python -c 'from orcaprime import __version__; print(__version__)')"
           fi
-          gh release upload "$RELEASE_TAG" release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 --clobber
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
+            exit 0
+          fi
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime $RELEASE_TAG" --notes "Instalador Windows do OrçaPrime e checksum SHA-256." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256

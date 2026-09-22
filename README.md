@@ -4,7 +4,7 @@
 
 Aplicativo Windows em português, com clientes, produtos/serviços, orçamentos, PDF, backup, ativação e API de licenciamento independente.
 
-> **Estado desta entrega:** código-fonte implementado e testes locais executados. O instalador Windows ainda NÃO foi gerado nem validado. Não há EXE neste pacote. O envio ao GitHub está autorizado. A geração do instalador depende do workflow Windows e da configuração real do servidor de licenças. Consulte `docs/STATUS_ENTREGA.md`.
+> **Estado desta entrega:** código-fonte implementado e testes locais executados. O instalador Windows ainda NÃO foi gerado nem validado. Não há EXE neste pacote. O projeto foi publicado em `srolivercpa1/OrcaPrime`. A geração do instalador depende do workflow Windows e da configuração real do servidor de licenças. Consulte `docs/STATUS_ENTREGA.md`.
 
 ## Comece por aqui
 
