@@ -7,6 +7,8 @@ import pytest
 def test_offline_actions_do_not_require_activation():
     app = App.__new__(App)
     app.license = None
+    app.actor = {"id": 0, "role": "ADMIN"}
+    app.current_page = None
     calls = []
     app.safe(lambda: calls.append('saved'))()
     assert calls == ['saved']
@@ -15,6 +17,8 @@ def test_offline_actions_do_not_require_activation():
 def test_offline_has_no_license_timers():
     app = App.__new__(App)
     app.license = None
+    app.actor = {"id": 0, "role": "ADMIN"}
+    app.current_page = None
     app.main_visible = True
     app.generation = 1
     def unexpected(*args):

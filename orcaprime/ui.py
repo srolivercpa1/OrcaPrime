@@ -9,9 +9,15 @@ from .license_client import format_code,LicenseFailure
 from .widgets import NAVY,TEAL,BG,MUTED,styles,heading,table,Form
 from .quote_editor import QuoteEditor
 from .pdf import export_quote
+from .workshop_ui import WorkshopPages
+from .workshop import Workshop
+from .user_ui import UserPages
+from . import __version__
 
-class App:
-    def __init__(self,root,store,license_client=None,auto_start=True):
+class App(WorkshopPages, UserPages):
+    def __init__(self,root,store,license_client=None,auto_start=True,actor=None):
+        self.actor=actor or {'id':0,'name':'Local','role':'ADMIN'};self.current_page=None
+        self.workshop=Workshop(store,self.actor)
         self.root=root;self.store=store;self.license=license_client;self.events=queue.Queue();self.main_visible=False
         self.closed=False;self.generation=0;self.suspended=[];self.hidden_dialogs=[];self.activation_host=None;root.title('OrçaPrime • Sistema Profissional de Orçamentos')
         root.geometry('1180x790');root.minsize(920,650);styles(root)
@@ -94,12 +100,26 @@ class App:
         ttk.Label(box,text='Licença individual • Validação segura pela internet',style='Sub.TLabel').pack(pady=20)
         ttk.Label(host,text='Desenvolvido por OLIVERTECH SOLUÇÕES',style='Sub.TLabel').pack(pady=20)
         entry.focus_set()
+    def allowed_pages(self):
+        common={'orders','warranties','license'}
+        role=self.actor['role']
+        if role=='TECNICO':return common
+        pages=common|{'dashboard','customers','quotes','catalog','printers','fiscal'}
+        if role in ('FINANCEIRO','ADMIN'):pages|={'stock','suppliers','finance','reports'}
+        if role=='ADMIN':pages|={'company','backup','users'}
+        return pages
     def guard(self):
+        if self.actor.get('id'):
+            with self.store.connect() as db:
+                user=db.execute('SELECT role,active FROM app_users WHERE id=?',(self.actor['id'],)).fetchone()
+            if not user or not user[1]:raise ValueError('Seu acesso foi desativado. Feche o programa.')
+            self.actor['role']=user[0]
+        if self.current_page and self.current_page not in self.allowed_pages():raise ValueError('Seu perfil não permite esta operação.')
         if self.license is not None and not self.license.allowed(): raise ValueError('Sua licença precisa ser validada. Salve seu trabalho antes de encerrar a sessão.')
     def safe(self,action):
         def run():
             try: self.guard();action()
-            except (ValueError,OSError) as e: messagebox.showerror('OrçaPrime',str(e),parent=self.root)
+            except (ValueError,OSError,RuntimeError) as e: messagebox.showerror('OrçaPrime',str(e),parent=self.root)
         return run
     def show_main(self):
         self.guard()
@@ -123,16 +143,17 @@ class App:
         menu=tk.Frame(canvas,bg=NAVY);win=canvas.create_window((0,0),window=menu,anchor='nw')
         menu.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')));canvas.bind('<Configure>',lambda e:canvas.itemconfigure(win,width=e.width))
         self.nav_buttons={}
-        for key,label in [('dashboard','Visão geral'),('quotes','Orçamentos'),('customers','Clientes'),('catalog','Produtos e serviços'),('company','Minha empresa'),('backup','Backup e restauração'),('license','Sobre o OrçaPrime' if self.license is None else 'Minha licença')]:
+        for key,label in [('dashboard','Visão geral'),('orders','Ordens de serviço'),('customers','Clientes'),('quotes','Orçamentos'),('catalog','Produtos e serviços'),('stock','Estoque e peças'),('suppliers','Fornecedores'),('finance','Financeiro e caixa'),('warranties','Garantias e retornos'),('reports','Relatórios'),('printers','Impressoras'),('fiscal','Notas fiscais'),('users','Usuários'),('company','Minha empresa'),('backup','Backup e restauração'),('license','Sobre o OrçaPrime' if self.license is None else 'Minha licença')]:
+            if key not in self.allowed_pages():continue
             b=tk.Button(menu,text=label,anchor='w',bg=NAVY,fg='#d7e3f3',activebackground=TEAL,activeforeground='white',relief='flat',bd=0,padx=20,pady=13,command=self.safe(lambda k=key:self.navigate(k)))
             b.pack(fill='x',padx=9,pady=3);self.nav_buttons[key]=b
-        tk.Label(nav,text='OLIVERTECH SOLUÇÕES\nv1.0.0',bg=NAVY,fg='#87a5c5',font=('Segoe UI',9),justify='left').pack(anchor='w',padx=22,pady=22)
+        tk.Label(nav,text='OLIVERTECH SOLUÇÕES\nv'+__version__,bg=NAVY,fg='#87a5c5',font=('Segoe UI',9),justify='left').pack(anchor='w',padx=22,pady=22)
         main=ttk.Frame(self.root);main.pack(side='left',fill='both',expand=True)
         header=ttk.Frame(main,padding=(28,16));header.pack(fill='x')
         ttk.Label(header,text=self.store.company().get('name') or 'Bem-vindo ao OrçaPrime',font=('Segoe UI',11,'bold')).pack(side='left')
         ttk.Label(header,text='● Gratuito • Offline' if self.license is None else '● Licença '+self.license.payload['plan'],foreground=TEAL).pack(side='right')
         ttk.Separator(main).pack(fill='x');self.body=ttk.Frame(main,padding=28);self.body.pack(fill='both',expand=True)
-        self.navigate('dashboard');generation=self.generation
+        self.navigate('orders' if self.actor.get('id') else 'dashboard');generation=self.generation
         if self.license is not None:
             self.root.after(1000,lambda:self.watch(generation));self.root.after(300000,lambda:self.revalidate(generation))
     def watch(self,generation):
@@ -148,6 +169,8 @@ class App:
             self.root.after(300000,lambda:self.revalidate(generation))
         self.async_call(self.license.validate,done)
     def navigate(self,page):
+        if page not in self.allowed_pages():raise ValueError('Seu perfil não permite acessar esta área.')
+        self.current_page=page
         self.guard()
         for widget in self.body.winfo_children(): widget.destroy()
         for key,b in self.nav_buttons.items(): b.configure(bg=TEAL if key==page else NAVY)
@@ -234,7 +257,7 @@ class App:
         def restore():
             p=filedialog.askopenfilename(filetypes=[('Backup OrçaPrime','*.db')])
             if p and messagebox.askyesno('Restaurar backup','Substituir os dados atuais pelo backup? Uma cópia prévia será preservada automaticamente.'):
-                self.store.restore(p);messagebox.showinfo('Restauração','Backup restaurado.');self.navigate('dashboard')
+                self.store.restore(p);messagebox.showinfo('Restauração','Backup restaurado. Abra o programa novamente para entrar com os usuários do backup.');self.closed=True;self.root.destroy()
         ttk.Button(self.body,text='Criar backup',style='Primary.TButton',command=self.safe(backup)).pack(anchor='w',pady=10)
         ttk.Button(self.body,text='Restaurar backup',command=self.safe(restore)).pack(anchor='w',pady=10)
         ttk.Label(self.body,text='Pasta de dados: '+str(self.store.path.parent),style='Sub.TLabel',wraplength=760).pack(anchor='w',pady=30)

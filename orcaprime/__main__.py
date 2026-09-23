@@ -5,6 +5,9 @@ from tkinter import messagebox
 from pathlib import Path
 from .storage import Store
 from .ui import App
+from .user_ui import authenticate_window
+from .maintenance import daily_backup
+from .widgets import styles
 
 def main():
     root=tk.Tk()
@@ -13,7 +16,15 @@ def main():
     data=Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local'/'share'))/'OrcaPrime'
     try:root.iconbitmap(str(base/'assets'/'orcaprime.ico'))
     except tk.TclError:pass
-    app=App(root,Store(data/'orcaprime.db'))
+    store=Store(data/'orcaprime.db')
+    try: daily_backup(store)
+    except (OSError,ValueError) as error: messagebox.showwarning('Backup automático','Não foi possível criar a cópia automática. Confira o espaço e as permissões da pasta de dados.',parent=root)
+    styles(root);root.withdraw()
+    actor=authenticate_window(root,store)
+    if actor is None:
+        root.destroy();return
+    root.deiconify()
+    app=App(root,store,actor=actor)
     root.mainloop()
 
 if __name__=='__main__':main()

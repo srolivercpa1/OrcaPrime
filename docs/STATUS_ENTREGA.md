@@ -1,5 +1,5 @@
-# Estado da entrega
+# Estado da versão 2.0
 
-O usuário aprovou a edição gratuita e offline. A aplicação abre diretamente e não depende do Railway ou de licença online.
+Ampliação de assistência técnica implementada; 68 testes locais passaram, incluindo interface e restauração: OS, peças/estoque, pagamentos, contas/parcelas, caixa, garantias, anexos, documentos, usuários e backups. O resultado final da compilação e publicação pode ser consultado no GitHub Actions.
 
-O workflow gera instalador e publica Release após testes e build no Windows. Consulte a execução do GitHub Actions para o resultado atual.
+Emissão fiscal não implementada/configurada. Impressão física depende do driver e leitor PDF do computador; compatibilidade com hardware real não foi testada nesta execução. Uso local em um computador, sem servidor pago.

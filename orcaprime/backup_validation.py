@@ -41,3 +41,10 @@ def validate_database(db):
         totals=calculate(items,q['discount'])
         for key,total in zip(('subtotal_cents','discount_cents','total_cents'),totals):
             if type(q.get(key)) is not int or q[key]!=total:raise ValueError()
+
+    from .workshop import validate_workshop_database
+    from .users import validate_users_database
+    validate_workshop_database(db)
+    validate_users_database(db)
+    from .finance_extras import validate_finance_database
+    validate_finance_database(db)
