@@ -25,9 +25,6 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: test
     runs-on: windows-latest
-    env:
-      ORCAPRIME_LICENSE_URL: ${{ vars.ORCAPRIME_LICENSE_URL }}
-      ORCAPRIME_PUBLIC_KEY: ${{ vars.ORCAPRIME_PUBLIC_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -82,4 +79,4 @@ jobs:
             echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime $RELEASE_TAG" --notes "Instalador Windows do OrçaPrime e checksum SHA-256." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime $RELEASE_TAG" --notes "OrçaPrime gratuito e offline: sem ativação, servidor ou mensalidade. Instalador Windows e checksum SHA-256." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256

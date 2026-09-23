@@ -5,7 +5,6 @@ function Run-Python {
     if ($LASTEXITCODE -ne 0) { throw "Etapa Python falhou: $args" }
 }
 Run-Python -m pytest -q
-Run-Python scripts/configure_client.py
 Run-Python scripts/make_icon.py
 Run-Python -m PyInstaller --clean --noconfirm OrcaPrime.spec
 $process = Start-Process '.\dist\OrcaPrime\OrcaPrime.exe' -PassThru
