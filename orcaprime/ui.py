@@ -111,7 +111,8 @@ class App:
                 if dialog.winfo_exists():dialog.deiconify();dialog.grab_set()
             self.hidden_dialogs=[];self.main_visible=True;self.generation+=1
             generation=self.generation
-            self.watch(generation);self.revalidate(generation)
+            if self.license is not None:
+                self.root.after(1000,lambda:self.watch(generation));self.root.after(300000,lambda:self.revalidate(generation))
             return
         self.clear();self.activation_host=None;self.main_visible=True;self.generation+=1
         nav=tk.Frame(self.root,bg=NAVY,width=222);nav.pack(side='left',fill='y');nav.pack_propagate(False)
@@ -132,7 +133,8 @@ class App:
         ttk.Label(header,text='● Gratuito • Offline' if self.license is None else '● Licença '+self.license.payload['plan'],foreground=TEAL).pack(side='right')
         ttk.Separator(main).pack(fill='x');self.body=ttk.Frame(main,padding=28);self.body.pack(fill='both',expand=True)
         self.navigate('dashboard');generation=self.generation
-        self.watch(generation);self.revalidate(generation)
+        if self.license is not None:
+            self.root.after(1000,lambda:self.watch(generation));self.root.after(300000,lambda:self.revalidate(generation))
     def watch(self,generation):
         if self.license is None or not self.main_visible or generation!=self.generation:return
         if not self.license.allowed():
