@@ -62,7 +62,7 @@ def test_real_login_and_integrated_pages(tmp_path,monkeypatch):
     root.report_callback_exception=lambda *args:errors.append(args)
     def fill_setup():
         win=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
-        entries=[w for w in descendants(win) if isinstance(w,ttk.Entry)]
+        entries=[w for w in descendants(win) if isinstance(w,(tk.Entry,ttk.Entry))]
         for widget,value in zip(entries,['gestor','SenhaSegura123','SenhaSegura123']):widget.insert(0,value)
         click(win,'Criar administrador')
     root.after(100,fill_setup)
