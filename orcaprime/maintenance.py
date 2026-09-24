@@ -1,5 +1,6 @@
 """Cópias consistentes na abertura, mantendo até sete dias locais."""
 from datetime import date
+from contextlib import closing
 import os
 import sqlite3
 import tempfile
@@ -8,7 +9,7 @@ from pathlib import Path
 
 def _valid(path):
     try:
-        with sqlite3.connect(path.resolve().as_uri()+'?mode=ro',uri=True) as db:
+        with closing(sqlite3.connect(path.resolve().as_uri()+'?mode=ro',uri=True)) as db:
             if db.execute('PRAGMA integrity_check').fetchone()!=('ok',):return False
             from .backup_validation import validate_database
             validate_database(db)

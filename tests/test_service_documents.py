@@ -68,7 +68,7 @@ class ServiceDocumentsTest(unittest.TestCase):
         self.export()
         with patch('orcaprime.service_documents.sys.platform', 'linux'), patch('orcaprime.service_documents.subprocess.Popen') as popen:
             open_document(self.path)
-            self.assertEqual(popen.call_args.args[0], ['xdg-open', str(self.path)])
+            self.assertEqual(popen.call_args.args[0], ['xdg-open', str(self.path.resolve())])
 
     def test_windows_printto_uses_selected_printer_and_reports_handler_failure(self):
         from orcaprime.service_documents import print_document
@@ -78,7 +78,7 @@ class ServiceDocumentsTest(unittest.TestCase):
         windll.shell32.ShellExecuteW.return_value = 31
         with patch('orcaprime.service_documents.sys.platform', 'win32'), patch('orcaprime.service_documents.list_printers', return_value=['Office']), patch('orcaprime.service_documents.ctypes.windll', windll, create=True):
             with self.assertRaisesRegex(RuntimeError, 'leitor PDF'): print_document(self.path, 'Office')
-            self.assertEqual(windll.shell32.ShellExecuteW.call_args.args[1:4], ('printto', str(self.path), '"Office"'))
+            self.assertEqual(windll.shell32.ShellExecuteW.call_args.args[1:4], ('printto', str(self.path.resolve()), '"Office"'))
             with self.assertRaises(ValueError): print_document(self.path, 'Office" bad')
 
     def test_invalid_pdf_cannot_be_opened(self):

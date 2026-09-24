@@ -1,6 +1,6 @@
 import json
 import sqlite3
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from datetime import date, datetime
 from pathlib import Path
 from .domain import calculate, money, number, STATUSES, line_total, decimal_text
@@ -115,14 +115,14 @@ class Store:
 
     def backup(self,destination):
         if Path(destination).resolve()==self.path.resolve(): raise ValueError('Escolha outro arquivo para o backup.')
-        with self.connect() as src, sqlite3.connect(destination) as dst: src.backup(dst)
+        with self.connect() as src, closing(sqlite3.connect(destination)) as dst: src.backup(dst)
 
     def restore(self,source):
         source=Path(source)
         if source.resolve()==self.path.resolve(): raise ValueError('Selecione um arquivo de backup diferente.')
         try:
             uri=source.resolve().as_uri()+'?mode=ro'
-            with sqlite3.connect(uri,uri=True) as src:
+            with closing(sqlite3.connect(uri,uri=True)) as src:
                 if src.execute('PRAGMA integrity_check').fetchone()[0]!='ok': raise ValueError()
                 from .backup_validation import validate_database
                 validate_database(src)

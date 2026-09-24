@@ -30,7 +30,7 @@ def raw(data): return json.dumps(data,ensure_ascii=False)
 class Workshop(FinanceExtras):
     def __init__(self,store,actor=None):
         self.store=store; self.actor=actor or {'id':0,'name':'Local','role':'ADMIN'}
-        with sqlite3.connect(self.store.path) as existing:
+        with self.store.connect() as existing:
             marker=existing.execute("SELECT value FROM meta WHERE key='workshop_schema'").fetchone()
             if marker and marker[0]!='1': raise ValueError('Versão de assistência incompatível.')
             needs_backup=not marker and any(existing.execute(f'SELECT 1 FROM {table} LIMIT 1').fetchone() for table in ('customers','catalog','quotes'))
@@ -63,7 +63,7 @@ class Workshop(FinanceExtras):
         finally: db.close()
     def _allow(self,*roles):
         role=self.actor.get('role')
-        with sqlite3.connect(self.store.path,timeout=15) as db:
+        with self.store.connect() as db:
             if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='app_users'").fetchone() and db.execute('SELECT 1 FROM app_users LIMIT 1').fetchone():
                 user=db.execute('SELECT name,role,active FROM app_users WHERE id=?',(self.actor.get('id'),)).fetchone()
                 if not user or not user[2]: raise PermissionError('Usuário inativo ou não autenticado.')
