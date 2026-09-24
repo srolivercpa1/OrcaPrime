@@ -1,8 +1,19 @@
-# OrçaPrime Assistência 2.0
+# OrçaPrime Assistência 2.1
 
 Aplicativo gratuito para Windows, com dados locais e sem licença online ou mensalidade.
 
 [Baixar a última versão](https://github.com/srolivercpa1/OrcaPrime/releases/latest)
+
+## Novidades da versão 2.1
+
+- Painel operacional com OS em andamento, atrasadas, aguardando aprovação e prontas para retirada; cartões abrem as listas correspondentes.
+- Filtros combinados por cliente/equipamento, situação, técnico, prioridade e prazo; visualização em tabela ou por etapas.
+- Prioridades baixa/normal/alta/urgente, campos multilinha e checklists de celular/computador/outros sem substituir anotações existentes.
+- Histórico por cliente e serial/IMEI; sem serial, o sistema identifica o resultado como histórico do cliente.
+- Central de impressão acessível pela lista ou pelo editor: OS, entrada, entrega, recibo, garantia e etiquetas, com prévia no leitor PDF.
+- Observações internas separadas dos serviços executados públicos; dados internos não aparecem nos PDFs.
+- Produtividade por técnico e período, baseada no primeiro evento de entrega, com exportação CSV.
+- Compatibilidade de restauração com backups anteriores, sem apagar os dados existentes.
 
 ## Recursos
 

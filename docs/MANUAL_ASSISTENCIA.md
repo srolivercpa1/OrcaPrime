@@ -29,3 +29,30 @@ Recibos mostram recebido e saldo. Nota fiscal não está integrada; emita pelo e
 
 ## Backup
 A cópia automática é diária na abertura, na pasta de dados. Faça backups externos regularmente pelo menu Backup e restauração. Fotos/anexos e usuários fazem parte do banco e da cópia. A restauração valida a estrutura e preserva uma cópia anterior. Após restaurar, reabra o programa e utilize a senha existente naquele backup.
+
+
+## Painel profissional e acompanhamento (2.1)
+
+A Visão geral apresenta quatro indicadores operacionais. Clique em um cartão para abrir as OS correspondentes. O cartão Em andamento exclui entregues e canceladas. A agenda lista previsões válidas; datas antigas inválidas são sinalizadas e não contam como atraso. Indicadores financeiros/estoque do painel só aparecem para administrador e financeiro.
+
+Nas Ordens de serviço, combine situação, técnico, prioridade e prazo com a pesquisa. Em andamento e Retornos são filtros opcionais; Limpar filtros remove todas as restrições. Etapas agrupa as mesmas OS por situação e abre o editor sem modificar o andamento automaticamente.
+
+No editor, use Prioridade para organizar urgências. Os campos de texto aceitam múltiplas linhas. Inserir checklist acrescenta o modelo escolhido preservando anotações anteriores. Observações internas ficam no cadastro e backup, mas não nos PDFs. Serviços executados / observações públicas são impressos na OS, entrega e garantia.
+
+Histórico do equipamento / cliente usa cliente e serial/IMEI. Sem identificador, a janela mostra o histórico do cliente; dois modelos iguais não são considerados automaticamente o mesmo aparelho.
+
+## Central de impressão (2.1)
+
+Selecione uma OS e use Imprimir documentos, ou abra a aba Documentos no editor. Escolha tipo, formato e impressora. Salvar PDF guarda o arquivo; Pré-visualizar abre no leitor; Imprimir envia ao leitor/fila configurados. Salve alterações da OS antes de abrir a central. O comprovante de entrega só é gerado após registrar a entrega.
+
+O tipo ETIQUETA usa exclusivamente papel 80×40 mm e a preferência de impressora de etiquetas. OS, entrada, entrega, recibo e garantia usam A4/58/80 mm. Confira margem/papel no driver real. Envio à fila não comprova saída física do papel.
+
+## Produtividade (2.1)
+
+Em Relatórios, informe início e fim no formato AAAA-MM-DD. O período inclui os dois limites. Cada OS conta uma vez pela primeira entrega registrada em seu histórico, agrupada pelo técnico registrado na OS. Atendimentos sem data de evento válida são sinalizados, sem inventar data. Exportar produtividade CSV aplica novamente o período e as permissões.
+
+A aba Financeiro e estoque contém valores acumulados. Margem orçada não é lucro recebido; as datas de recebimento são independentes das datas de entrega.
+
+## Emissão fiscal
+
+A versão 2.1 não transmite NF-e, NFC-e ou NFS-e. A definição depende da cidade/UF, enquadramento, tipos de operação e emissor da empresa. Nenhum provedor pago foi contratado. Os documentos administrativos do sistema não são notas fiscais autorizadas.

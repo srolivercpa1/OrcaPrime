@@ -79,4 +79,4 @@ jobs:
             echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime $RELEASE_TAG" --notes "OrçaPrime Assistência: ordens de serviço, estoque, pagamentos, contas e parcelas, conferência de caixa, garantias, documentos e usuários locais. Gratuito e offline. Emissão fiscal não configurada. Impressão depende do driver Windows e leitor PDF. Instalador e checksum SHA-256." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime $RELEASE_TAG" --notes "OrçaPrime Assistência 2.1: painel operacional, filtros e prioridades de OS, checklists, central de impressão, comprovante de entrega, observações internas e produtividade por técnico. Mantém estoque, caixa, garantias, usuários e backups. Gratuito e offline. Emissão fiscal não configurada. Impressão depende do driver Windows e leitor PDF. Instalador e checksum SHA-256." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256

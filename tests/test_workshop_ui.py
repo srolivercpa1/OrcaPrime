@@ -75,3 +75,41 @@ def test_real_login_and_integrated_pages(tmp_path,monkeypatch):
         assert not errors
         assert Users(store).authenticate('gestor','SenhaSegura123')['id']==actor['id']
     finally:root.destroy()
+
+
+def test_combined_order_filters_clear_and_multiline_save(tmp_path):
+    from orcaprime.workshop_queries import OrderFilters
+    root=tk.Tk()
+    try:
+        store=Store(tmp_path/'new.db');cid=store.save_customer({'name':'João'})
+        app=Harness(root,store)
+        first=app.workshop.save_order({'customer_id':cid,'equipment':'Celular','technician':'Ana','priority':'URGENTE','due_date':'2020-01-01'})
+        app.workshop.save_order({'customer_id':cid,'equipment':'Notebook','technician':'Bia'})
+        app.order_filters=OrderFilters(technician='Ana',priority='URGENTE',deadline='overdue')
+        app.navigate('orders');root.update()
+        assert app.orders_tree.get_children()==(str(first),)
+        click(root,'Limpar filtros');root.update()
+        assert len(app.orders_tree.get_children())==2
+        app.edit_order(first);root.update()
+        win=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+        win.order_fields['complaint'].set('Linha um\nLinha dois')
+        click(win,'Salvar dados');root.update()
+        assert app.workshop.get_order(first)['complaint']=='Linha um\nLinha dois'
+    finally:root.destroy()
+
+
+def test_label_selection_restricts_paper_and_printer_preferences(tmp_path,monkeypatch):
+    monkeypatch.setattr('orcaprime.service_documents.list_printers',lambda:['A4 printer','Label printer'])
+    root=tk.Tk()
+    try:
+        store=Store(tmp_path/'db');cid=store.save_customer({'name':'Cliente'})
+        app=Harness(root,store);oid=app.workshop.save_order({'customer_id':cid,'equipment':'Celular'})
+        with store.connect() as db:
+            db.execute("INSERT INTO meta(key,value) VALUES('printer_settings',?)",('{"A4":"A4 printer","ETIQUETA":"Label printer"}',))
+        app.document_dialog(oid);root.update()
+        win=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+        combos=[w for w in descendants(win) if isinstance(w,ttk.Combobox)]
+        combos[0].set('ETIQUETA');root.update()
+        assert tuple(combos[1]['values'])==('ETIQUETA',)
+        assert combos[2].get()=='Label printer'
+    finally:root.destroy()

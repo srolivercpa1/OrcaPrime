@@ -1,3 +1,4 @@
+from .widgets import FONT
 """Desktop pages for the offline service workshop."""
 import csv
 import json
@@ -53,21 +54,70 @@ class WorkshopPages:
 
     def _orders_page(self,warranty):
         from .workshop import STATUSES
-        heading(self.body,'Garantias e retornos' if warranty else 'Ordens de serviço','Atendimento, diagnóstico, reparo e entrega com histórico permanente.')
-        bar=ttk.Frame(self.body);bar.pack(fill='x');search=tk.StringVar();status=tk.StringVar(value='TODAS')
-        ttk.Entry(bar,textvariable=search,width=27).pack(side='left')
-        ttk.Combobox(bar,textvariable=status,values=('TODAS',)+tuple(STATUSES),state='readonly',width=22).pack(side='left',padx=8)
-        ttk.Button(bar,text='Nova OS',command=self.safe(lambda:self.edit_order())).pack(side='right')
-        tree=table(self.body,[('n','Número',110),('c','Cliente',170),('e','Equipamento',150),('s','Situação',150),('t','Total',100),('b','Saldo',100)])
+        from .workshop_queries import OrderFilters, PRIORITIES, priority
+        initial=getattr(self,'order_filters',OrderFilters()) if not warranty else OrderFilters(returns_only=False)
+        self.order_filters=initial
+        heading(self.body,'Garantias e retornos' if warranty else 'Ordens de serviço','Acompanhe a oficina por técnico, prioridade, situação e prazo.')
+        controls=ttk.Frame(self.body);controls.pack(fill='x')
+        search=tk.StringVar(value=initial.text);status=tk.StringVar(value=initial.status or 'TODAS')
+        technician=tk.StringVar(value=initial.technician);urgency=tk.StringVar(value=initial.priority or 'TODAS')
+        deadlines={'Todos os prazos':'','Atrasadas':'overdue','Hoje':'today','Sem previsão':'undated'}
+        deadline=tk.StringVar(value=next(k for k,v in deadlines.items() if v==initial.deadline))
+        active=tk.BooleanVar(value=initial.active_only)
+        returns=tk.BooleanVar(value=initial.returns_only);view=tk.StringVar(value='Tabela')
+        all_orders=self.workshop.list_orders()
+        techs=sorted({o.get('technician','').strip() for o in all_orders if o.get('technician','').strip()})
+        for col,(label,var,values) in enumerate([
+            ('Pesquisar',search,None),('Situação',status,('TODAS',)+tuple(STATUSES)),
+            ('Técnico',technician,['']+techs),('Prioridade',urgency,('TODAS',)+PRIORITIES),
+            ('Previsão',deadline,tuple(deadlines)),('Visualização',view,('Tabela','Etapas'))]):
+            cell=ttk.Frame(controls);cell.grid(row=col//3,column=col%3,sticky='ew',padx=(0,8),pady=4)
+            ttk.Label(cell,text=label,style='Sub.TLabel').pack(anchor='w')
+            widget=ttk.Combobox(cell,textvariable=var,values=values,state='readonly',width=17) if values is not None else ttk.Entry(cell,textvariable=var,width=17)
+            widget.pack(fill='x');controls.columnconfigure(col%3,weight=1)
+        actions=ttk.Frame(self.body);actions.pack(fill='x',pady=8)
+        ttk.Button(actions,text='+ Nova OS',style='Primary.TButton',command=self.safe(lambda:self.edit_order())).pack(side='right')
+        count=ttk.Label(actions,style='Sub.TLabel');count.pack(side='left')
+        ttk.Checkbutton(actions,text='Retornos',variable=returns).pack(side='left',padx=4)
+        ttk.Checkbutton(actions,text='Em andamento',variable=active).pack(side='left',padx=4)
+        footer=ttk.Frame(self.body);footer.pack(side='bottom',fill='x',pady=8)
+        host=ttk.Frame(self.body);host.pack(fill='both',expand=True)
+        self.orders_tree=None
+        def selected():
+            if self.orders_tree is None:raise ValueError('Selecione uma OS na visualização em tabela.')
+            return self._selected(self.orders_tree)
         def refresh(*_):
-            tree.delete(*tree.get_children())
-            for o in self.workshop.list_orders(search.get()):
-                if status.get()!='TODAS' and o['status']!=status.get():continue
-                if warranty and not (o.get('warranty_days') or o.get('parent_id')):continue
-                tree.insert('','end',iid=str(o['id']),values=(o['number'],o.get('customer',{}).get('name',''),o.get('equipment',''),o['status'],brl(o['total_cents']),brl(o['balance_cents'])))
-        ttk.Button(self.body,text='Abrir OS selecionada',command=self.safe(lambda:self.edit_order(self._selected(tree)))).pack(anchor='w')
-        tree.bind('<Double-1>',lambda e:self.safe(lambda:self.edit_order(self._selected(tree)))())
-        search.trace_add('write',refresh);status.trace_add('write',refresh);refresh()
+            filters=OrderFilters(search.get(),'' if status.get()=='TODAS' else status.get(),technician.get(),
+                '' if urgency.get()=='TODAS' else urgency.get(),deadlines[deadline.get()],returns.get(),active.get())
+            self.order_filters=filters
+            orders=self.workshop.query_orders(filters)
+            if warranty:orders=[o for o in orders if o.get('warranty_days') or o.get('parent_id')]
+            count.configure(text=f'{len(orders)} atendimento(s)')
+            for child in host.winfo_children():child.destroy()
+            self.orders_tree=None
+            if view.get()=='Tabela':
+                tree=table(host,[('n','OS',125),('c','Cliente',170),('e','Equipamento',150),('t','Técnico',115),('p','Prioridade',100),('d','Previsão',110),('s','Situação',165)])
+                self.orders_tree=tree
+                tree.tag_configure('urgent',foreground='#a33b14')
+                for o in orders:
+                    tree.insert('','end',iid=str(o['id']),values=(o['number'],o.get('customer',{}).get('name',''),o.get('equipment',''),o.get('technician') or 'Sem técnico',priority(o),'/'.join(o.get('due_date','').split('-')[::-1]),o['status']),tags=('urgent',) if priority(o)=='URGENTE' else ())
+                tree.bind('<Double-1>',lambda e:self.safe(lambda:self.edit_order(selected()))())
+            else:
+                board=scroll_frame(host)
+                for state in STATUSES:
+                    group=[o for o in orders if o['status']==state]
+                    if not group:continue
+                    ttk.Label(board,text=state.replace('_',' ').capitalize()+f' | {len(group)}',font=(FONT,12,'bold')).pack(anchor='w',pady=(12,5))
+                    for o in group:
+                        ttk.Button(board,text=f"{o['number']} | {o.get('customer',{}).get('name','')} | {priority(o)}",command=self.safe(lambda oid=o['id']:self.edit_order(oid))).pack(fill='x',pady=3)
+                if not orders:ttk.Label(board,text='Nenhuma OS encontrada para estes filtros.').pack(pady=20)
+        def clear():
+            search.set('');status.set('TODAS');technician.set('');urgency.set('TODAS');deadline.set('Todos os prazos');returns.set(False);active.set(False)
+        ttk.Button(footer,text='Abrir OS selecionada',command=self.safe(lambda:self.edit_order(selected()))).pack(side='left')
+        ttk.Button(footer,text='Imprimir documentos',command=self.safe(lambda:self.document_dialog(selected()))).pack(side='left',padx=8)
+        ttk.Button(footer,text='Limpar filtros',command=self.safe(clear)).pack(side='right')
+        for var in (search,status,technician,urgency,deadline,returns,active,view):var.trace_add('write',lambda *_:self.safe(refresh)())
+        refresh()
 
     def edit_order(self,order_id=None):
         from .workshop import STATUSES
@@ -83,14 +133,27 @@ class WorkshopPages:
             tab=ttk.Frame(notebook);notebook.add(tab,text=name);tabs[name]=tab
         variables={};customers_map={str(c['id'])+' — '+c['name']:c['id'] for c in customers}
         fields=[('customer_id','Cliente *',tuple(customers_map)),('equipment','Equipamento *',None),('brand','Marca',None),('model','Modelo',None),('serial','Número de série / IMEI',None),('accessories','Acessórios recebidos',None),('complaint','Defeito relatado *',None),('checklist','Estado de conservação / checklist de entrada',None)]
-        diagnostic=[('diagnosis','Diagnóstico técnico',None),('technician','Técnico responsável',None),('due_date','Previsão (AAAA-MM-DD)',None),('warranty_days','Garantia (dias)',None),('warranty_terms','Condições da garantia',None),('receiver','Recebedor na entrega',None),('final_checklist','Checklist final / testes',None),('notes','Serviços executados / observações',None)]
+        diagnostic=[('diagnosis','Diagnóstico técnico',None),('technician','Técnico responsável',None),('priority','Prioridade',('BAIXA','NORMAL','ALTA','URGENTE')),('due_date','Previsão (AAAA-MM-DD)',None),('warranty_days','Garantia (dias)',None),('warranty_terms','Condições da garantia',None),('receiver','Recebedor na entrega',None),('final_checklist','Checklist final / testes',None),('notes','Serviços executados / observações públicas (impressas)',None),('internal_notes','Observações internas (não impressas)',None)]
+        from .widgets import TextValue
+        from .order_templates import append_checklist
         for tab,group in [('Entrada',fields),('Diagnóstico e entrega',diagnostic)]:
             body=scroll_frame(tabs[tab])
             for key,label,options in group:
                 ttk.Label(body,text=label).pack(anchor='w',pady=(8,3));value=order.get(key,'0' if key=='warranty_days' else '')
+                if key=='priority':value=value or 'NORMAL'
                 if key=='customer_id':value=next((k for k,v in customers_map.items() if v==order.get('customer_id')),next(iter(customers_map)))
-                var=tk.StringVar(value=value);variables[key]=var
-                (ttk.Combobox(body,textvariable=var,values=options,state='readonly') if options else ttk.Entry(body,textvariable=var)).pack(fill='x')
+                if key in ('complaint','checklist','diagnosis','notes','final_checklist','warranty_terms','internal_notes'):
+                    widget=tk.Text(body,height=4,wrap='word',font=(FONT,10),relief='solid',bd=1)
+                    var=TextValue(widget);var.set(value);widget.pack(fill='x')
+                else:
+                    var=tk.StringVar(value=value)
+                    (ttk.Combobox(body,textvariable=var,values=options,state='readonly') if options else ttk.Entry(body,textvariable=var)).pack(fill='x')
+                variables[key]=var
+                if key=='checklist':
+                    category=tk.StringVar(value='celular');row=ttk.Frame(body);row.pack(fill='x',pady=5)
+                    ttk.Combobox(row,textvariable=category,values=('celular','computador','outros'),state='readonly',width=14).pack(side='left')
+                    ttk.Button(row,text='Inserir checklist',command=self.safe(lambda:variables['checklist'].set(append_checklist(variables['checklist'].get(),category.get())))).pack(side='left',padx=8)
+        win.order_fields=variables
         initial={k:v.get() for k,v in variables.items()}
         itemtree=table(tabs['Itens'],[('d','Descrição',260),('q','Quantidade',100),('p','Preço',100),('t','Total',100)])
         paytree=table(tabs['Pagamentos'],[('d','Data',160),('m','Forma',120),('a','Valor',110),('s','Situação',130)])
@@ -99,12 +162,12 @@ class WorkshopPages:
         def refresh():
             nonlocal order
             if order_id:order=self.workshop.get_order(order_id)
-            summary.configure(text=f"{order.get('number','Nova OS')} • {order.get('status','Entrada')} | Total: {brl(order.get('total_cents',0))} | Pago: {brl(order.get('paid_cents',0))} | Saldo: {brl(order.get('balance_cents',0))} | Garantia: {order.get('warranty_days',0)} dias")
+            summary.configure(text=f"{order.get('number','Nova OS')} | {order.get('status','Entrada')} | Total: {brl(order.get('total_cents',0))} | Pago: {brl(order.get('paid_cents',0))} | Saldo: {brl(order.get('balance_cents',0))} | Garantia: {order.get('warranty_days',0)} dias")
             itemtree.delete(*itemtree.get_children());paytree.delete(*paytree.get_children())
             for i in order.get('items',[]):itemtree.insert('','end',iid=str(i['id']),values=(i['description'],i['quantity'],brl(i.get('price_cents',0)),brl(i.get('total_cents',0))))
             for p in order.get('payments',[]):paytree.insert('','end',iid=str(p['id']),values=(p.get('created_at',''),p.get('method',''),brl(p['amount_cents']),'Estornado' if p.get('reversed') else 'Recebido'))
             history.configure(state='normal');history.delete('1.0','end')
-            history.insert('end','\n\n'.join(f"{e.get('created_at','')} • {e.get('kind',e.get('action',''))}\n{e.get('note','')}" for e in order.get('events',[])));history.configure(state='disabled')
+            history.insert('end','\n\n'.join(f"{e.get('created_at','')} | {e.get('kind',e.get('action',''))}\n{e.get('note','')}" for e in order.get('events',[])));history.configure(state='disabled')
             attachments.configure(values=[f"{a['id']} — {a.get('filename',a.get('name','Anexo'))}" for a in order.get('attachments',[])])
         def save():
             nonlocal order_id,initial
@@ -155,24 +218,17 @@ class WorkshopPages:
                 else:messagebox.showinfo('Anexo salvo','Arquivo salvo em: '+path,parent=win)
         bar=ttk.Frame(tabs['Histórico e anexos']);bar.pack(fill='x',padx=8,pady=8)
         ttk.Button(bar,text='Adicionar foto / anexo',command=self.safe(attach)).pack(side='left');ttk.Button(bar,text='Salvar anexo / abrir PDF',command=self.safe(openattach)).pack(side='left',padx=8)
-        docbody=scroll_frame(tabs['Documentos']);kind=tk.StringVar(value='OS');paper=tk.StringVar(value='A4')
-        ttk.Label(docbody,text='Documento').pack(anchor='w');ttk.Combobox(docbody,textvariable=kind,values=('OS','ENTRADA','RECIBO','GARANTIA','ETIQUETA'),state='readonly').pack(fill='x',pady=8)
-        ttk.Label(docbody,text='Formato').pack(anchor='w');ttk.Combobox(docbody,textvariable=paper,values=('A4','80mm','58mm','ETIQUETA'),state='readonly').pack(fill='x',pady=8)
-        def document(print_now=False):
-            from .service_documents import export_service_document,open_document,print_document
+        def open_documents():
             require_saved()
             if initial!={k:v.get() for k,v in variables.items()}:raise ValueError('Salve os dados da OS antes de gerar o documento.')
-            path=filedialog.asksaveasfilename(parent=win,defaultextension='.pdf',initialfile=f"{kind.get()}-{order['number']}.pdf",filetypes=[('PDF','*.pdf')])
-            if not path:return
-            export_service_document(order,order.get('company') or self.store.company(),path,kind=kind.get(),paper=paper.get())
-            if print_now:
-                printer=self._printer_settings().get(paper.get())
-                if not printer:raise ValueError('Configure uma impressora para este formato na página Impressoras. O PDF foi salvo.')
-                print_document(path,printer)
-            else:open_document(path)
-        ttk.Button(docbody,text='Exportar e visualizar PDF',command=self.safe(document)).pack(fill='x',pady=6)
-        ttk.Button(docbody,text='Exportar e imprimir',command=self.safe(lambda:document(True))).pack(fill='x',pady=6)
-        ttk.Label(docbody,text='Emissão fiscal não configurada',foreground='#a33718').pack(anchor='w',pady=16)
+            snapshot={k:v.get() for k,v in variables.items()}
+            def ensure_saved():
+                if snapshot!={k:v.get() for k,v in variables.items()}:raise ValueError('A OS foi alterada. Salve e reabra a central de documentos.')
+            self.document_dialog(order_id,ensure_saved)
+        docbody=scroll_frame(tabs['Documentos'])
+        ttk.Label(docbody,text='OS, entrada, entrega, garantia, recibo e etiqueta',font=(FONT,13,'bold'),wraplength=500).pack(anchor='w',pady=15)
+        ttk.Button(docbody,text='Abrir central de impressão',style='Primary.TButton',command=self.safe(open_documents)).pack(anchor='w')
+        ttk.Label(docbody,text='Os documentos usam os dados salvos. Observações internas não são impressas.',wraplength=500).pack(anchor='w',pady=15)
         def transition():
             require_saved()
             def submit(d):
@@ -184,11 +240,59 @@ class WorkshopPages:
             def submit(d):
                 result=self.workshop.create_return(order_id,d['complaint']);self.edit_order(result['id'] if isinstance(result,dict) else result)
             self._dialog('Retorno em garantia',[('complaint','Defeito relatado no retorno',None)],{},submit)
+        def equipment_history():
+            from .workshop_queries import equipment_history as find_history
+            result=find_history(self.workshop.list_orders(),customers_map[variables['customer_id'].get()],variables['serial'].get())
+            hist=tk.Toplevel(win);hist.title('Histórico do equipamento' if result['scope']=='equipment' else 'Histórico do cliente — equipamento sem serial');hist.geometry('800x450')
+            tree=table(hist,[('n','OS',160),('e','Equipamento',180),('s','Situação',180)])
+            for o in result['orders']:tree.insert('','end',iid=str(o['id']),values=(o['number'],o.get('equipment',''),o['status']))
+            ttk.Button(hist,text='Abrir atendimento',command=self.safe(lambda:self.edit_order(self._selected(tree)))).pack(pady=8)
+        ttk.Button(tabs['Histórico e anexos'],text='Histórico do equipamento / cliente',command=self.safe(equipment_history)).pack(anchor='w',padx=8,pady=8)
         def close():
             if initial!={k:v.get() for k,v in variables.items()} and not messagebox.askyesno('Descartar alterações?','Fechar sem salvar as alterações?',parent=win):return
             win.destroy();self.navigate('orders')
         for label,action in [('Salvar dados',save),('Alterar situação',transition),('Retorno em garantia',warranty),('Fechar',close)]:ttk.Button(bottom,text=label,command=self.safe(action)).pack(side='left',padx=4)
         win.protocol('WM_DELETE_WINDOW',close);refresh()
+
+    def document_dialog(self, order_id, ensure_saved=None):
+        from .document_actions import DocumentActions
+        from .service_documents import KINDS, PAPERS, list_printers, open_document
+        order=self.workshop.get_order(order_id)
+        actions=DocumentActions(self.workshop,self.store.company())
+        win=tk.Toplevel(self.root);win.title('Central de impressão | '+order['number']);win.geometry('600x550');win.transient(self.root)
+        body=ttk.Frame(win,padding=24);body.pack(fill='both',expand=True)
+        heading(body,'Documentos da OS',order['number']+' | '+order.get('customer',{}).get('name',''))
+        kind=tk.StringVar(value='OS');paper=tk.StringVar(value='A4');printer=tk.StringVar()
+        settings=self._printer_settings()
+        ttk.Label(body,text='Tipo de documento').pack(anchor='w')
+        ttk.Combobox(body,textvariable=kind,values=tuple(KINDS),state='readonly').pack(fill='x',pady=(4,12))
+        ttk.Label(body,text='Papel').pack(anchor='w')
+        paper_box=ttk.Combobox(body,textvariable=paper,values=('A4','58mm','80mm'),state='readonly');paper_box.pack(fill='x',pady=(4,12))
+        ttk.Label(body,text='Impressora instalada').pack(anchor='w')
+        notice=tk.StringVar(value='Documentos administrativos | não são notas fiscais.')
+        try:names=list_printers()
+        except (ValueError,OSError,RuntimeError) as exc:names=[];notice.set(str(exc))
+        names=[n.get('name','') if isinstance(n,dict) else n for n in names]
+        ttk.Combobox(body,textvariable=printer,values=['']+names,state='readonly').pack(fill='x',pady=(4,12))
+        def defaults(*_):printer.set(settings.get(paper.get(),'') if settings.get(paper.get(),'') in names else '')
+        def changed_kind(*_):
+            paper_box.configure(values=('ETIQUETA',) if kind.get()=='ETIQUETA' else ('A4','58mm','80mm'))
+            if kind.get()=='ETIQUETA':paper.set('ETIQUETA')
+            elif paper.get()=='ETIQUETA':paper.set('A4')
+        paper.trace_add('write',defaults);kind.trace_add('write',changed_kind);defaults()
+        ttk.Label(body,textvariable=notice,wraplength=500,style='Sub.TLabel').pack(fill='x',pady=14)
+        def generate(mode):
+            if ensure_saved:ensure_saved()
+            if mode=='print' and not printer.get():raise ValueError('Selecione uma impressora. Você também pode salvar o PDF.')
+            path=filedialog.asksaveasfilename(parent=win,defaultextension='.pdf',initialfile=kind.get()+'-'+order['number']+'.pdf',filetypes=[('PDF','*.pdf')])
+            result=actions.generate(order_id,path,kind.get(),paper.get())
+            if not result:return
+            if mode=='preview':open_document(result);notice.set('PDF salvo e enviado ao leitor para pré-visualização.')
+            elif mode=='print':actions.send(result,printer.get());notice.set('PDF enviado ao leitor/fila. Confira a impressão no equipamento.')
+            else:notice.set('PDF salvo: '+str(result))
+        bar=ttk.Frame(body);bar.pack(fill='x',pady=10)
+        for label,mode in [('Salvar PDF','save'),('Pré-visualizar','preview'),('Imprimir','print')]:
+            ttk.Button(bar,text=label,command=self.safe(lambda m=mode:generate(m))).pack(side='left',padx=3)
 
     def page_stock(self):
         heading(self.body,'Estoque de peças','Entradas, saídas e ajustes preservam o histórico de movimentações.')
@@ -271,25 +375,8 @@ class WorkshopPages:
         ttk.Button(balances,text='Abrir OS',command=self.safe(lambda:self.edit_order(self._selected(bt)))).pack(anchor='w');refresh()
 
     def page_reports(self):
-        heading(self.body,'Relatórios gerenciais','Indicadores calculados sobre os registros locais atuais.')
-        report=self.workshop.report();tree=table(self.body,[('k','Indicador',400),('v','Resultado',260)])
-        rows=[]
-        for label,key in [('Recebido nas OS','received_cents'),('Saldo das OS','balance_cents'),('Valor do estoque (custo)','stock_value_cents')]:rows.append((label,brl(report.get(key,0))))
-        for status,count in report.get('orders_by_status',{}).items():rows.append(('OS — '+status,str(count)))
-        rows.append(('Peças abaixo do mínimo',str(len(report.get('low_stock',[])))))
-        rows.append(('OS com prazo vencido',str(len(report.get('overdue',[])))))
-        for p in report.get('low_stock',[]):rows.append(('Estoque baixo — '+p.get('description',''),str(p.get('quantity',0))))
-        for a in report.get('overdue',[]):rows.append(('Prazo vencido — '+a.get('number',''),a.get('due_date','')))
-        for result in report.get('order_results',[]):
-            rows.append(('Resultado — '+result.get('number','')+' / '+result.get('technician',''),brl(result.get('margin_cents',0))))
-        for row in rows:tree.insert('','end',values=row)
-        def export():
-            path=filedialog.asksaveasfilename(parent=self.root,defaultextension='.csv',initialfile='relatorio-oficina.csv',filetypes=[('CSV','*.csv')])
-            if path:
-                with open(path,'w',encoding='utf-8-sig',newline='') as stream:
-                    writer=csv.writer(stream,delimiter=';');writer.writerow(('Indicador','Resultado'));writer.writerows(rows)
-                messagebox.showinfo('Relatório','Relatório exportado.',parent=self.root)
-        ttk.Button(self.body,text='Exportar CSV',command=self.safe(export)).pack(anchor='w')
+        from .reports_ui import render_reports
+        render_reports(self)
 
     def _printer_settings(self):
         with self.store.connect() as db:

@@ -1,14 +1,17 @@
 import tkinter as tk
+import sys
+
+FONT = "Segoe UI" if sys.platform == "win32" else "Helvetica"
 from tkinter import ttk, messagebox
 
 NAVY='#10233f';TEAL='#087f78';BG='#f2f5f9';TEXT='#172b45';MUTED='#64748b'
 
 def styles(root):
-    root.configure(bg=BG);root.option_add('*Font',('Segoe UI',10))
+    root.configure(bg=BG)
     s=ttk.Style(root);s.theme_use('clam')
-    s.configure('.',font=('Segoe UI',10),background=BG,foreground=TEXT)
+    s.configure('.',font=(FONT,10),background=BG,foreground=TEXT)
     s.configure('TFrame',background=BG);s.configure('Card.TFrame',background='white')
-    s.configure('TLabel',background=BG);s.configure('Title.TLabel',font=('Segoe UI',24,'bold'))
+    s.configure('TLabel',background=BG);s.configure('Title.TLabel',font=(FONT,24,'bold'))
     s.configure('Sub.TLabel',foreground=MUTED)
     s.configure('TButton',padding=(14,9),background='#e2e8f0',borderwidth=0)
     s.map('TButton',background=[('active','#cbd5e1')])
@@ -18,7 +21,7 @@ def styles(root):
     s.configure('TCombobox',padding=7,fieldbackground='white',foreground=TEXT)
     s.map('TCombobox',fieldbackground=[('readonly','white')],foreground=[('readonly',TEXT)])
     s.configure('Treeview',rowheight=34,background='white',fieldbackground='white',foreground=TEXT,borderwidth=0)
-    s.configure('Treeview.Heading',background='#e2e8f0',foreground=TEXT,font=('Segoe UI',10,'bold'),padding=10)
+    s.configure('Treeview.Heading',background='#e2e8f0',foreground=TEXT,font=(FONT,10,'bold'),padding=10)
     s.map('Treeview',background=[('selected',TEAL)],foreground=[('selected','white')])
 
 def heading(parent,title,subtitle=''):
@@ -51,3 +54,16 @@ class Form(tk.Toplevel):
             except (ValueError,OSError) as e: messagebox.showerror('Confira os dados',str(e),parent=self)
         ttk.Button(body,text='Salvar',style='Primary.TButton',command=save).pack(anchor='e',pady=(20,0))
         self.bind('<Escape>',lambda e:self.destroy());self.grab_set();self.focus_set()
+
+
+class TextValue:
+    """Text control adapter used by forms with the same get/set contract as StringVar."""
+    def __init__(self, widget):
+        self.widget = widget
+
+    def get(self):
+        return self.widget.get('1.0', 'end-1c')
+
+    def set(self, value):
+        self.widget.delete('1.0', 'end')
+        self.widget.insert('1.0', str(value or ''))

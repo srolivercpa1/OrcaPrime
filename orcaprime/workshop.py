@@ -8,7 +8,7 @@ from pathlib import Path
 from .finance_extras import FinanceExtras
 
 STATUSES = ('RECEBIDA','DIAGNOSTICO','AGUARDANDO_APROVACAO','AGUARDANDO_PECA','EM_REPARO','EM_TESTES','PRONTA','ENTREGUE','CANCELADA')
-FIELDS = ('equipment','brand','model','serial','accessories','complaint','diagnosis','technician','priority','due_date','checklist','notes','approval_note','warranty_terms','receiver','final_checklist')
+FIELDS = ('equipment','brand','model','serial','accessories','complaint','diagnosis','technician','priority','due_date','checklist','notes','approval_note','warranty_terms','receiver','final_checklist','internal_notes')
 TABLES = ('ws_orders','ws_items','ws_events','ws_parts','ws_movements','ws_payments','ws_suppliers','ws_accounts','ws_cash','ws_attachments')
 
 def scaled(value, scale=100):
@@ -96,6 +96,26 @@ class Workshop(FinanceExtras):
         with self.connect() as db:
             rows=[self._get(db,x[0]) for x in db.execute('SELECT id FROM ws_orders ORDER BY id DESC').fetchall()]
         return [x for x in rows if search.casefold() in raw(x).casefold()]
+    def query_orders(self, filters, today=None):
+        from .workshop_queries import filter_orders
+        self._allow('ATENDIMENTO','TECNICO','FINANCEIRO')
+        return filter_orders(self.list_orders(), filters, today or date.today())
+
+    def dashboard(self, today=None):
+        from .workshop_queries import summarize_orders
+        self._allow('ATENDIMENTO','TECNICO','FINANCEIRO')
+        result = summarize_orders(self.list_orders(), today or date.today())
+        if self.actor['role'] in ('ADMIN','FINANCEIRO'):
+            report = self.report()
+            result['finance'] = {k: report[k] for k in ('received_cents','balance_cents')}
+            result['low_stock'] = report['low_stock']
+        return result
+
+    def productivity(self, start, end):
+        from .workshop_queries import productivity
+        self._allow('FINANCEIRO')
+        return productivity(self.list_orders(), start, end)
+
     def save_order(self,data,id_=None):
         self._allow('ATENDIMENTO','TECNICO','FINANCEIRO')
         if self.actor.get('role')=='FINANCEIRO' and (id_ is None or set(data)-{'receiver','final_checklist'}): raise PermissionError('Financeiro pode apenas registrar os dados de entrega.')
@@ -114,6 +134,11 @@ class Workshop(FinanceExtras):
         for k in FIELDS:
             if k in data: d[k]=str(data[k]).strip()[:10000]
             elif k not in d: d[k]=''
+        if 'priority' in data:
+            from .workshop_queries import PRIORITIES
+            normalized=str(data['priority']).strip().upper() or 'NORMAL'
+            if normalized not in PRIORITIES: raise ValueError('Selecione uma prioridade válida.')
+            d['priority']=normalized
         if not d['equipment']: raise ValueError('Informe o equipamento.')
         if d['due_date']: date.fromisoformat(d['due_date'])
         days=int(data.get('warranty_days',d.get('warranty_days',0)))
@@ -288,10 +313,11 @@ class Workshop(FinanceExtras):
         with self.connect() as db: return [dict(json.loads(r['data']),id=r['id'],amount_cents=r['amount_cents'],payment_id=r['payment_id'],account_id=r['account_id']) for r in db.execute('SELECT * FROM ws_cash ORDER BY id DESC')]
     def report(self):
         self._allow('FINANCEIRO')
+        from .workshop_queries import OrderFilters, filter_orders
         orders=self.list_orders(); parts=self.list_parts()
         results=[{'id':o['id'],'number':o['number'],'technician':o.get('technician',''),'total_cents':o['total_cents'],'cost_cents':sum(int((Decimal(i['cost_cents'])*qty(i['quantity'])/1000).quantize(Decimal('1'),rounding=ROUND_HALF_UP)) for i in o['items'])} for o in orders if o['status']!='CANCELADA']
         for result in results: result['margin_cents']=result['total_cents']-result['cost_cents']
-        return {'order_results':results,'orders_by_status':{s:sum(o['status']==s for o in orders) for s in STATUSES},'received_cents':sum(o['paid_cents'] for o in orders),'balance_cents':sum(o['balance_cents'] for o in orders if o['status']!='CANCELADA'),'stock_value_cents':sum(int(Decimal(p['cost_cents'])*p['stock_milli']/1000) for p in parts),'low_stock':[p for p in parts if p['stock_milli']<=qty(p['minimum'])],'overdue':[o for o in orders if o.get('due_date') and o['due_date']<date.today().isoformat() and o['status'] not in ('ENTREGUE','CANCELADA')]}
+        return {'order_results':results,'orders_by_status':{s:sum(o['status']==s for o in orders) for s in STATUSES},'received_cents':sum(o['paid_cents'] for o in orders),'balance_cents':sum(o['balance_cents'] for o in orders if o['status']!='CANCELADA'),'stock_value_cents':sum(int(Decimal(p['cost_cents'])*p['stock_milli']/1000) for p in parts),'low_stock':[p for p in parts if p['stock_milli']<=qty(p['minimum'])],'overdue':filter_orders(orders,OrderFilters(deadline='overdue'),date.today())}
     def add_attachment(self,order_id,path):
         self._allow('ATENDIMENTO','TECNICO'); p=Path(path)
         with p.open('rb') as f: content=f.read(10*1024*1024+1)
@@ -321,7 +347,7 @@ def _validate_workshop_database(db):
         if status not in STATUSES or not isinstance(d,dict) or not d.get('equipment') or not d.get('number'): raise ValueError('OS inválida.')
         if d['number'] in numbers: raise ValueError('Numeração duplicada.')
         numbers.add(d['number'])
-        if any(k not in d or not isinstance(d[k],str) for k in FIELDS): raise ValueError('Dados de OS incompletos.')
+        if any(k not in d or not isinstance(d[k],str) for k in FIELDS if k!='internal_notes') or ('internal_notes' in d and not isinstance(d['internal_notes'],str)): raise ValueError('Dados de OS incompletos.')
         customer=d.get('customer')
         if not isinstance(customer,dict) or customer.get('id')!=cid or not customer.get('name'): raise ValueError('Cliente da OS inconsistente.')
         if not isinstance(d.get('company'),dict): raise ValueError('Empresa inválida.')

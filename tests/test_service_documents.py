@@ -85,3 +85,12 @@ class ServiceDocumentsTest(unittest.TestCase):
         from orcaprime.service_documents import open_document
         self.path.write_text('not a PDF')
         with self.assertRaises(ValueError): open_document(self.path)
+
+
+def test_service_pdf_embeds_font_for_consistent_printing(tmp_path):
+    from orcaprime.service_documents import export_service_document
+    path=tmp_path/'font.pdf'
+    export_service_document({'number':'1','customer':{'name':'João da Conceição'},'equipment':'Celular'}, {'name':'Assistência'},path)
+    fonts=PdfReader(path).pages[0]['/Resources']['/Font'].get_object()
+    embedded=[f.get_object().get('/FontDescriptor') for f in fonts.values()]
+    assert any(d and '/FontFile2' in d.get_object() for d in embedded)

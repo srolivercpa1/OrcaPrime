@@ -14,11 +14,22 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import reportlab
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from .domain import brl
 
+def ensure_pdf_fonts():
+    # Bundle the fonts distributed by ReportLab so viewer substitutions cannot change layout.
+    folder = Path(reportlab.__file__).resolve().parent / 'fonts'
+    for name, filename in (('OrcaSans','Vera.ttf'), ('OrcaSans-Bold','VeraBd.ttf')):
+        if name not in pdfmetrics.getRegisteredFontNames():
+            pdfmetrics.registerFont(TTFont(name, str(folder / filename)))
+
+
 PAPERS = {'A4': A4, '58mm': (58 * mm, 210 * mm), '80mm': (80 * mm, 297 * mm), 'ETIQUETA': (80 * mm, 40 * mm)}
-KINDS = {'OS': 'ORDEM DE SERVIÇO', 'ENTRADA': 'COMPROVANTE DE ENTRADA', 'RECIBO': 'RECIBO', 'GARANTIA': 'TERMO DE GARANTIA', 'ETIQUETA': 'ETIQUETA'}
+KINDS = {'OS': 'ORDEM DE SERVIÇO', 'ENTRADA': 'COMPROVANTE DE ENTRADA', 'RECIBO': 'RECIBO', 'GARANTIA': 'TERMO DE GARANTIA', 'ETIQUETA': 'ETIQUETA', 'ENTREGA': 'COMPROVANTE DE ENTREGA'}
 
 
 def _text(value):
@@ -42,19 +53,24 @@ def _date(value):
 
 def _fit(value, width, size=9):
     value = ' '.join(_text(value).split())
-    if stringWidth(value, 'Helvetica', size) <= width:
+    if stringWidth(value, 'OrcaSans', size) <= width:
         return value
-    while value and stringWidth(value + '...', 'Helvetica', size) > width:
+    while value and stringWidth(value + '...', 'OrcaSans', size) > width:
         value = value[:-1]
     return value + '...'
 
 
 def export_service_document(order, company, destination, kind='OS', paper='A4') -> Path:
     """Export an administrative document; no implicit fiscal or warranty terms."""
+    ensure_pdf_fonts()
     if kind not in KINDS:
         raise ValueError('Tipo de documento inválido.')
     if paper not in PAPERS:
         raise ValueError('Papel inválido. Use A4, 58mm, 80mm ou ETIQUETA.')
+    if paper == 'ETIQUETA' and kind != 'ETIQUETA':
+        raise ValueError('O papel de etiqueta só pode ser usado para etiquetas.')
+    if kind == 'ENTREGA' and (order.get('status') != 'ENTREGUE' or not order.get('delivered_at')):
+        raise ValueError('Registre a entrega da OS antes de emitir o comprovante.')
     path = Path(destination)
     if path.suffix.lower() != '.pdf':
         raise ValueError('Escolha um arquivo com extensão .pdf.')
@@ -68,7 +84,7 @@ def export_service_document(order, company, destination, kind='OS', paper='A4') 
                  ' '.join(filter(None, [_text(order.get(k)) for k in ('equipment', 'brand', 'model')])),
                  'Série: ' + _text(order.get('serial') or 'Não informada')]
         for i, line in enumerate(lines):
-            c.setFont('Helvetica-Bold' if i == 1 else 'Helvetica', 9)
+            c.setFont('OrcaSans-Bold' if i == 1 else 'OrcaSans', 9)
             c.drawString(4 * mm, height - 7 * mm - i * 6 * mm, _fit(line, width - 8 * mm, 9))
         c.save()
         return path
@@ -76,9 +92,9 @@ def export_service_document(order, company, destination, kind='OS', paper='A4') 
     thermal = paper != 'A4'
     margin = 4 * mm if thermal else 16 * mm
     font_size = 8 if thermal else 10
-    style = ParagraphStyle('ServiceBody', fontName='Helvetica', fontSize=font_size,
+    style = ParagraphStyle('ServiceBody', fontName='OrcaSans', fontSize=font_size,
                            leading=font_size * 1.4, spaceAfter=5, splitLongWords=True)
-    heading = ParagraphStyle('ServiceHeading', parent=style, fontName='Helvetica-Bold', spaceBefore=8)
+    heading = ParagraphStyle('ServiceHeading', parent=style, fontName='OrcaSans-Bold', spaceBefore=8)
     story = []
 
     def paragraph(value, bold=False):
@@ -118,6 +134,12 @@ def export_service_document(order, company, destination, kind='OS', paper='A4') 
         field('Valor total', brl(total))
         field('Valor pago', brl(paid))
         field('Saldo pendente', brl(int(order.get('balance_cents', total - paid))))
+    if kind in ('OS', 'ENTREGA', 'GARANTIA'):
+        field('Serviços executados / observações públicas', order.get('notes'))
+    if kind == 'ENTREGA':
+        field('Entrega efetiva', _date(order.get('delivered_at')))
+        field('Recebedor', order.get('receiver'))
+        field('Testes e checklist de saída', order.get('final_checklist'))
     if kind == 'GARANTIA':
         paragraph('GARANTIA CONFIGURADA', True)
         delivery = order.get('delivered_at')
@@ -141,7 +163,7 @@ def export_service_document(order, company, destination, kind='OS', paper='A4') 
 
     def frame(c, doc):
         c.saveState()
-        c.setFont('Helvetica', 7)
+        c.setFont('OrcaSans', 7)
         c.setFillColor(colors.HexColor('#475569'))
         c.drawString(margin, size[1] - 8 * mm, _fit('OS ' + number + ' | ' + KINDS[kind], size[0] - margin * 2, 7))
         c.drawString(margin, 6 * mm, f'Página {doc.page} • Não é documento fiscal')
