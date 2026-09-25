@@ -84,6 +84,10 @@ def create_app(service,admin_user,admin_hash,public_origin):
     def javascript(): return FileResponse(Path(__file__).with_name('admin.js'),media_type='application/javascript')
     @app.get('/admin/style.css',dependencies=[Depends(owner)])
     def css(): return FileResponse(Path(__file__).with_name('admin.css'),media_type='text/css')
+    @app.get('/admin/client-config',dependencies=[Depends(owner)])
+    def client_config():
+        return {'license_url': public_origin.rstrip('/'),
+                'public_key': base64.b64encode(service.signing_key.public_key().public_bytes_raw()).decode()}
     @app.get('/admin/licenses',dependencies=[Depends(owner)])
     def licenses(q:str=''): return service.list(q[:200])
     @app.post('/admin/licenses',dependencies=[Depends(owner)])
