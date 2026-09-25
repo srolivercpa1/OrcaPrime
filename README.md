@@ -1,10 +1,10 @@
-# OrçaPrime Assistência 2.1
+# OrçaPrime 1.0 Comercial — Sketch Inc
 
-Aplicativo gratuito para Windows, com dados locais e sem licença online ou mensalidade.
+Software pago para assistência técnica no Windows, desenvolvido por Sketch Inc. Dados locais com ativação e controle de licenças online pelo proprietário.
 
 [Baixar a última versão](https://github.com/srolivercpa1/OrcaPrime/releases/latest)
 
-## Novidades da versão 2.1
+## Gestão da assistência
 
 - Painel operacional com OS em andamento, atrasadas, aguardando aprovação e prontas para retirada; cartões abrem as listas correspondentes.
 - Filtros combinados por cliente/equipamento, situação, técnico, prioridade e prazo; visualização em tabela ou por etapas.
@@ -28,16 +28,19 @@ Aplicativo gratuito para Windows, com dados locais e sem licença online ou mens
 - PDFs de OS, entrada, recibo e garantia em A4/58/80 mm; etiquetas de 80×40 mm.
 - Seleção de impressoras instaladas no Windows; exportação e abertura em leitor PDF.
 - Relatórios e exportação CSV; perfis administrador, atendimento, técnico e financeiro.
-- Backup automático na abertura (até sete cópias diárias locais), backup manual e restauração validada.
+- Backup ZIP diário às 18h e ao entrar no Windows, pasta backup na instalação, retenção configurável e cópia opcional para pasta sincronizada.
+- Login salvo protegido pelo Windows e entrada automática opcionais.
+- Licenças individuais com bloqueio, renovação e limite de computadores pelo painel privado.
 
 ## Primeiro uso
 
 1. Instale `OrcaPrime-Setup.exe`.
 2. Crie seu usuário administrador e uma senha de pelo menos 10 caracteres. Este acesso é local, sem cadastro online.
-3. Cadastre a empresa e os clientes. Adicione peças e registre o saldo inicial do estoque.
-4. Abra uma OS e preencha a entrada. Salve antes de adicionar itens, pagamentos ou anexos.
-5. Passe por diagnóstico e aprovação. Para iniciar reparo, registre quem aprovou e por qual canal.
-6. Registre recebimentos, testes de saída e recebedor antes de entregar.
+3. Ative o computador com o código fornecido pela Sketch Inc. É necessária conexão com o servidor de licenças.
+4. Cadastre a empresa e os clientes. Adicione peças e registre o saldo inicial do estoque.
+5. Abra uma OS e preencha a entrada. Salve antes de adicionar itens, pagamentos ou anexos.
+6. Passe por diagnóstico e aprovação. Para iniciar reparo, registre quem aprovou e por qual canal.
+7. Registre recebimentos, testes de saída e recebedor antes de entregar.
 
 ## Impressão e limites atuais
 
@@ -58,9 +61,10 @@ Depois de restaurar um backup, o programa fecha para reabrir com os usuários e 
 ```sh
 python -m pip install -r requirements-dev.txt
 python -m pytest -q
+python -m scripts.prepare_release
 python -m orcaprime
 ```
 
 Windows: `scripts/build_windows.ps1` testa, empacota com PyInstaller, verifica abertura, compila com Inno Setup e calcula SHA-256. GitHub Actions publica uma Release após aprovação desses passos. O pacote não exige Python instalado no computador do cliente.
 
-Os módulos de licenciamento antigos permanecem como histórico técnico e não são utilizados na inicialização gratuita.
+O painel do proprietário controla licenças online. A distribuição comercial exige uma configuração pública válida; chaves privadas e senha administrativa ficam somente no servidor. Versões antigas sem licenciamento precisam ser atualizadas. Veja [estado da entrega](docs/STATUS_ENTREGA.md).
