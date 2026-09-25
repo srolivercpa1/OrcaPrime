@@ -1,9 +1,7 @@
-# Estado da entrega — OrçaPrime 2.1
+# OrçaPrime 1.0 — Layout moderno
 
-Implementados: painel operacional, filtros de OS, prioridades, visualização por etapas, checklists, histórico de equipamento/cliente, observações internas, central de impressão com comprovante de entrega e produtividade por período. Dados e operações da versão 2.0 preservados.
+Nova identidade visual com cartões arredondados, indicadores em destaque, barra lateral refinada e tabelas renovadas. Mantém os recursos da versão 2.1.1, incluindo OS, garantias, impressão, relatórios, permissões e botão de olho nos campos de senha.
 
-Validação local: 96 testes passaram com interface gráfica virtual, incluindo regressão de restauração de backups anteriores, permissões, datas inválidas, filtros, documentos e acesso aos botões em resolução mínima. Existe um aviso de depreciação da dependência Starlette/httpx na API legada; não é falha de teste.
+A versão exibida é 1.0, conforme solicitado. O release usa a identificação `v1.0-modern` para preservar o release histórico `v1.0.0`. A alteração de versão não reverte o banco nem remove recursos.
 
-Os PDFs foram gerados em A4/58/80 mm e etiquetas para conferência. Impressão física depende de teste no equipamento do usuário. O instalador Windows é entregue somente após aprovação dos testes e build no GitHub Actions.
-
-Emissão de NF-e/NFC-e/NFS-e não configurada. Depende dos dados da empresa, definição do emissor e homologação. Nenhuma emissão foi simulada.
+98 testes locais aprovados com interface gráfica virtual. Instalador publicado somente após testes Windows, empacotamento e verificação de abertura. Impressão física depende do equipamento. Emissão fiscal continua não configurada.

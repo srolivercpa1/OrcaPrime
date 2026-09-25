@@ -73,10 +73,10 @@ jobs:
           if [[ "$RELEASE_REF" == refs/tags/* ]]; then
             RELEASE_TAG="${RELEASE_REF#refs/tags/}"
           else
-            RELEASE_TAG="v$(python -c 'from orcaprime import __version__; print(__version__)')"
+            RELEASE_TAG="$(python -c 'from orcaprime import __release_tag__; print(__release_tag__)')"
           fi
           if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
             echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime $RELEASE_TAG" --notes "OrçaPrime 2.1.1: tela de criação de usuário e acesso refinada, campos arredondados e botão de olho para mostrar ou ocultar senhas. Mantém painel, OS, garantias e relatórios. Emissão fiscal não configurada. Instalador Windows e checksum SHA-256." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Layout moderno" --notes "OrçaPrime 1.0 — Layout moderno: painel com cartões arredondados, nova hierarquia visual, navegação refinada e tabelas renovadas. Inclui todos os recursos de assistência da versão 2.1.1 e o botão de olho nos campos de senha. Nova identificação visual 1.0; preserva os dados existentes. Não substitui o release 1.0 histórico. Emissão fiscal não configurada." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256

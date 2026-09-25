@@ -4,24 +4,30 @@ import sys
 FONT = "Segoe UI" if sys.platform == "win32" else "Helvetica"
 from tkinter import ttk, messagebox
 
-NAVY='#10233f';TEAL='#087f78';BG='#f2f5f9';TEXT='#172b45';MUTED='#64748b'
+NAVY='#101c30';TEAL='#087f78';BG='#f4f7fb';TEXT='#182b45';MUTED='#62748b'
 
 def styles(root):
     root.configure(bg=BG)
     s=ttk.Style(root);s.theme_use('clam')
     s.configure('.',font=(FONT,10),background=BG,foreground=TEXT)
+    s.configure('Header.TFrame',background='white');s.configure('Header.TLabel',background='white')
     s.configure('TFrame',background=BG);s.configure('Card.TFrame',background='white')
     s.configure('TLabel',background=BG);s.configure('Title.TLabel',font=(FONT,24,'bold'))
     s.configure('Sub.TLabel',foreground=MUTED)
-    s.configure('TButton',padding=(14,9),background='#e2e8f0',borderwidth=0)
+    s.configure('TButton',padding=(14,9),background='#e6edf5',borderwidth=0,focuscolor=TEAL)
+    s.configure('TNotebook',background=BG,borderwidth=0)
+    s.configure('TNotebook.Tab',padding=(16,10),background='#e6edf5')
+    s.map('TNotebook.Tab',background=[('selected','white')],foreground=[('selected',TEAL)])
     s.map('TButton',background=[('active','#cbd5e1')])
     s.configure('Primary.TButton',background=TEAL,foreground='white')
     s.map('Primary.TButton',background=[('active','#065f59'),('disabled','#94a3b8')],foreground=[('disabled','#f1f5f9')])
+    s.configure('TScrollbar',background='#cbd5e1',troughcolor=BG,borderwidth=0,arrowsize=12)
+    s.map('TScrollbar',background=[('active','#94a3b8')])
     s.configure('TEntry',padding=7,fieldbackground='white',foreground=TEXT)
     s.configure('TCombobox',padding=7,fieldbackground='white',foreground=TEXT)
     s.map('TCombobox',fieldbackground=[('readonly','white')],foreground=[('readonly',TEXT)])
-    s.configure('Treeview',rowheight=34,background='white',fieldbackground='white',foreground=TEXT,borderwidth=0)
-    s.configure('Treeview.Heading',background='#e2e8f0',foreground=TEXT,font=(FONT,10,'bold'),padding=10)
+    s.configure('Treeview',rowheight=38,background='white',fieldbackground='white',foreground=TEXT,borderwidth=0)
+    s.configure('Treeview.Heading',background='#eaf0f7',foreground=MUTED,font=(FONT,10,'bold'),padding=10)
     s.map('Treeview',background=[('selected',TEAL)],foreground=[('selected','white')])
 
 def heading(parent,title,subtitle=''):

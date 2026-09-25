@@ -1,4 +1,5 @@
 from .widgets import FONT
+from .modern_widgets import MetricCard
 """Operational home screen for the local workshop."""
 import tkinter as tk
 from tkinter import ttk
@@ -17,7 +18,7 @@ class DashboardPages:
     def page_dashboard(self):
         data = self.workshop.dashboard()
         self.dashboard_values = data
-        heading(self.body, 'Central da assistência', 'Atendimentos, prazos e prioridades em um só lugar.')
+        heading(self.body, 'Visão geral', 'Sua assistência organizada. Do atendimento à entrega.')
         body = scroll_frame(self.body)
         top = ttk.Frame(body); top.pack(fill='x', pady=(0,16))
         ttk.Label(top, text=date.today().strftime('%d/%m/%Y'), style='Sub.TLabel').pack(side='left')
@@ -27,17 +28,14 @@ class DashboardPages:
         cards.columnconfigure((0,1), weight=1, uniform='cards')
         self.dashboard_cards = {}
         definitions = [
-            ('active','EM ANDAMENTO',OrderFilters(active_only=True),NAVY),
-            ('overdue','PRAZO VENCIDO',OrderFilters(deadline='overdue'),'#b45309'),
-            ('awaiting_approval','AGUARDANDO APROVAÇÃO',OrderFilters(status='AGUARDANDO_APROVACAO'),NAVY),
-            ('ready','PRONTAS PARA RETIRADA',OrderFilters(status='PRONTA'),TEAL),
+            ('active','Ordens em andamento',OrderFilters(active_only=True),NAVY),
+            ('overdue','Com prazo vencido',OrderFilters(deadline='overdue'),'#b45309'),
+            ('awaiting_approval','Aguardando aprovação',OrderFilters(status='AGUARDANDO_APROVACAO'),NAVY),
+            ('ready','Prontas para retirada',OrderFilters(status='PRONTA'),TEAL),
         ]
         for i,(key,label,filters,color) in enumerate(definitions):
             command = self.safe(lambda f=filters:self.open_orders(f))
-            button=tk.Button(cards,text=f'{data[key]}\n{label}',command=command,
-                font=(FONT,12,'bold'),bg='white',fg=color,activebackground='#e8f5f3',
-                activeforeground=color,relief='flat',bd=0,padx=12,pady=20,anchor='w',wraplength=210,
-                cursor='hand2',highlightthickness=1,highlightbackground='#dce5ef')
+            button=MetricCard(cards,data[key],label.capitalize(),color,command)
             button.grid(row=i//2,column=i%2,sticky='nsew',padx=5,pady=5)
             self.dashboard_cards[key]=button
         if data['invalid_dates']:
