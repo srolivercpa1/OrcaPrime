@@ -50,6 +50,8 @@ jobs:
           path: |
             release/OrcaPrime-Setup.exe
             release/OrcaPrime-Setup.exe.sha256
+            release/OrcaPrime-Portable.zip
+            release/OrcaPrime-Portable.zip.sha256
           if-no-files-found: error
   release:
     if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
@@ -79,4 +81,4 @@ jobs:
             echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Layout moderno" --notes "OrçaPrime 1.0 — Layout moderno: painel com cartões arredondados, nova hierarquia visual, navegação refinada e tabelas renovadas. Inclui todos os recursos de assistência da versão 2.1.1 e o botão de olho nos campos de senha. Nova identificação visual 1.0; preserva os dados existentes. Não substitui o release 1.0 histórico. Emissão fiscal não configurada." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Premium" --notes "OrçaPrime 1.0 Premium: identidade azul-marinho e azul elétrico, logo e ícone fornecidos, painel responsivo com ações rápidas, agenda real, indicadores coloridos e tema escuro em todas as abas. Login e cadastro renovados com botão de olho. Inclui instalador e versão portátil compilada. Dados locais preservados; emissão fiscal não configurada." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 release/OrcaPrime-Portable.zip release/OrcaPrime-Portable.zip.sha256

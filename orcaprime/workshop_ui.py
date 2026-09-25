@@ -98,7 +98,7 @@ class WorkshopPages:
             if view.get()=='Tabela':
                 tree=table(host,[('n','OS',125),('c','Cliente',170),('e','Equipamento',150),('t','Técnico',115),('p','Prioridade',100),('d','Previsão',110),('s','Situação',165)])
                 self.orders_tree=tree
-                tree.tag_configure('urgent',foreground='#a33b14')
+                tree.tag_configure('urgent',foreground='#ffad56')
                 for o in orders:
                     tree.insert('','end',iid=str(o['id']),values=(o['number'],o.get('customer',{}).get('name',''),o.get('equipment',''),o.get('technician') or 'Sem técnico',priority(o),'/'.join(o.get('due_date','').split('-')[::-1]),o['status']),tags=('urgent',) if priority(o)=='URGENTE' else ())
                 tree.bind('<Double-1>',lambda e:self.safe(lambda:self.edit_order(selected()))())
@@ -399,4 +399,4 @@ class WorkshopPages:
             with self.store.connect() as db:db.execute('INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)',('printer_settings',json.dumps({k:v.get() for k,v in variables.items()})))
             messagebox.showinfo('Impressoras','Preferências salvas.',parent=self.root)
         ttk.Button(body,text='Salvar preferências',command=self.safe(save)).pack(anchor='w')
-        ttk.Label(body,text='Emissão fiscal não configurada',foreground='#a33718').pack(anchor='w',pady=20)
+        ttk.Label(body,text='Emissão fiscal não configurada',foreground='#ffad56').pack(anchor='w',pady=20)

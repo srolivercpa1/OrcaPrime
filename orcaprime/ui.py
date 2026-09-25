@@ -1,4 +1,5 @@
-from .widgets import FONT
+from .widgets import FONT, CARD, TEXT, CYAN, BORDER
+from .branding import brand_header, apply_icon, line_icon
 import queue
 import threading
 import tkinter as tk
@@ -22,9 +23,15 @@ class App(DashboardPages, WorkshopPages, UserPages):
         self.workshop=Workshop(store,self.actor)
         self.root=root;self.store=store;self.license=license_client;self.events=queue.Queue();self.main_visible=False
         self.closed=False;self.generation=0;self.suspended=[];self.hidden_dialogs=[];self.activation_host=None;root.title('OrçaPrime | Gestão Profissional de Assistência')
-        root.geometry('1180x790');root.minsize(920,650);styles(root)
-        root.protocol('WM_DELETE_WINDOW',self.close);root.after(100,self.poll)
+        root.geometry(f'{min(1600,root.winfo_screenwidth()-60)}x{min(940,root.winfo_screenheight()-80)}');root.minsize(920,650);styles(root);apply_icon(root)
+        root.protocol('WM_DELETE_WINDOW',self.close);root.bind('<Destroy>',self._on_destroy,add='+');root.after(100,self.poll)
         if auto_start: self.show_activation()
+    def _on_destroy(self,event):
+        if event.widget is not self.root:return
+        self.closed=True
+        try:
+            for timer in self.root.tk.call('after','info'):self.root.after_cancel(timer)
+        except tk.TclError:pass
     def close(self):
         if any(isinstance(w,tk.Toplevel) for w in self.root.winfo_children()):
             if not messagebox.askyesno('Fechar OrçaPrime','Há uma edição aberta. Encerrar e descartar as alterações não salvas?',parent=self.root):return
@@ -137,26 +144,26 @@ class App(DashboardPages, WorkshopPages, UserPages):
                 self.root.after(1000,lambda:self.watch(generation));self.root.after(300000,lambda:self.revalidate(generation))
             return
         self.clear();self.activation_host=None;self.main_visible=True;self.generation+=1
-        nav=tk.Frame(self.root,bg=NAVY,width=222);nav.pack(side='left',fill='y');nav.pack_propagate(False)
-        tk.Label(nav,text='OrçaPrime',bg=NAVY,fg='white',font=(FONT,23,'bold')).pack(anchor='w',padx=22,pady=(24,3))
-        tk.Label(nav,text='GESTÃO DA ASSISTÊNCIA',bg=NAVY,fg='#87a5c5',font=(FONT,8)).pack(anchor='w',padx=22,pady=(0,16))
+        nav=tk.Frame(self.root,bg=NAVY,width=242);nav.pack(side='left',fill='y');nav.pack_propagate(False)
+        brand_header(nav,NAVY,48).pack(anchor='w',padx=14,pady=(22,24))
         canvas=tk.Canvas(nav,bg=NAVY,highlightthickness=0);scroll=ttk.Scrollbar(nav,orient='vertical',command=canvas.yview)
         scroll.pack(side='right',fill='y');canvas.pack(fill='both',expand=True);canvas.configure(yscrollcommand=scroll.set)
         menu=tk.Frame(canvas,bg=NAVY);win=canvas.create_window((0,0),window=menu,anchor='nw')
         menu.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')));canvas.bind('<Configure>',lambda e:canvas.itemconfigure(win,width=e.width))
-        self.nav_buttons={}
+        self.nav_buttons={};self.nav_icons={}
         for key,label in [('dashboard','Visão geral'),('orders','Ordens de serviço'),('customers','Clientes'),('quotes','Orçamentos'),('catalog','Produtos e serviços'),('stock','Estoque e peças'),('suppliers','Fornecedores'),('finance','Financeiro e caixa'),('warranties','Garantias e retornos'),('reports','Relatórios'),('printers','Impressoras'),('fiscal','Notas fiscais'),('users','Usuários'),('company','Minha empresa'),('backup','Backup e restauração'),('license','Sobre o OrçaPrime' if self.license is None else 'Minha licença')]:
             if key not in self.allowed_pages():continue
             section={'dashboard':'ATENDIMENTO','stock':'GESTÃO','users':'CONFIGURAÇÕES'}.get(key)
             if section:tk.Label(menu,text=section,bg=NAVY,fg='#91a7c2',font=(FONT,8,'bold'),anchor='w').pack(fill='x',padx=22,pady=(14,6))
-            b=tk.Button(menu,text=label,anchor='w',bg=NAVY,fg='#d7e3f3',activebackground=TEAL,activeforeground='white',relief='flat',bd=0,highlightthickness=1,highlightbackground=NAVY,highlightcolor=TEAL,padx=16,pady=8,font=(FONT,10),cursor='hand2',command=self.safe(lambda k=key:self.navigate(k)))
+            self.nav_icons[key]=line_icon(menu,key)
+            b=tk.Button(menu,image=self.nav_icons[key],compound='left',text=label,anchor='w',bg=NAVY,fg='#d7e3f3',activebackground=TEAL,activeforeground='white',relief='flat',bd=0,highlightthickness=1,highlightbackground=NAVY,highlightcolor=TEAL,padx=12,pady=9,font=(FONT,10),cursor='hand2',command=self.safe(lambda k=key:self.navigate(k)))
             b.pack(fill='x',padx=12,pady=2);self.nav_buttons[key]=b
         tk.Label(nav,text='OLIVERTECH SOLUÇÕES\nv'+__version__,bg=NAVY,fg='#87a5c5',font=(FONT,9),justify='left').pack(anchor='w',padx=22,pady=22)
         main=ttk.Frame(self.root);main.pack(side='left',fill='both',expand=True)
-        header=ttk.Frame(main,padding=(28,16),style='Header.TFrame');header.pack(fill='x')
+        header=ttk.Frame(main,padding=(22,16),style='Header.TFrame');header.pack(fill='x')
         ttk.Label(header,text=self.store.company().get('name') or 'Bem-vindo ao OrçaPrime',font=(FONT,11,'bold'),wraplength=340,style='Header.TLabel').pack(side='left')
         ttk.Label(header,text=(self.actor.get('name','Local')+' | Offline') if self.license is None else '● Licença '+self.license.payload['plan'],foreground=TEAL,style='Header.TLabel').pack(side='right')
-        ttk.Separator(main).pack(fill='x');self.body=ttk.Frame(main,padding=28);self.body.pack(fill='both',expand=True)
+        ttk.Separator(main).pack(fill='x');self.body=ttk.Frame(main,padding=20);self.body.pack(fill='both',expand=True)
         self.navigate('dashboard' if 'dashboard' in self.allowed_pages() else 'orders');generation=self.generation
         if self.license is not None:
             self.root.after(1000,lambda:self.watch(generation));self.root.after(300000,lambda:self.revalidate(generation))
@@ -177,7 +184,7 @@ class App(DashboardPages, WorkshopPages, UserPages):
         self.current_page=page
         self.guard()
         for widget in self.body.winfo_children(): widget.destroy()
-        for key,b in self.nav_buttons.items(): b.configure(bg='#183a49' if key==page else NAVY,fg='#7ce4ce' if key==page else '#d7e3f3')
+        for key,b in self.nav_buttons.items(): b.configure(bg='#007cff' if key==page else NAVY,fg='white' if key==page else '#bdd0eb')
         getattr(self,'page_'+page)()
     def page_customers(self): self.records(False)
     def page_catalog(self): self.records(True)
@@ -193,17 +200,18 @@ class App(DashboardPages, WorkshopPages, UserPages):
                 if search.get().casefold() not in str(d).casefold():continue
                 vals=(d['description'],d['kind'],d['unit'],brl(d['price_cents'])) if catalog else (d['name'],d['document'],d['phone'],d['email'])
                 tree.insert('','end',iid=str(d['id']),values=vals)
-        def edit(new=False):
+        def edit(new=False,default_kind='SERVIÇO'):
             selected=tree.selection();record={} if new else next((d for d in data if selected and str(d['id'])==selected[0]),None)
             if record is None: raise ValueError('Selecione um registro para editar.')
             if catalog:
                 fields=[('description','Descrição *',None),('kind','Tipo',('PRODUTO','SERVIÇO')),('unit','Unidade',None),('price','Preço (R$) *',None)]
-                values=dict(record,price=decimal_text(record.get('price_cents',0)),kind=record.get('kind','SERVIÇO'),unit=record.get('unit','un'))
+                values=dict(record,price=decimal_text(record.get('price_cents',0)),kind=record.get('kind',default_kind),unit=record.get('unit','un'))
             else:
                 fields=[('name','Nome *',None),('document','CPF / CNPJ',None),('phone','Telefone',None),('email','E-mail',None),('address','Endereço',None)];values=record
             def save(d):
                 (self.store.save_item if catalog else self.store.save_customer)(d,record.get('id'));refresh()
             Form(self.root,('Novo ' if new else 'Editar ')+('item' if catalog else 'cliente'),fields,values,save,self.guard)
+        self.edit_record=edit
         ttk.Button(bar,text='Editar selecionado',command=self.safe(edit)).pack(side='right',padx=8)
         ttk.Button(bar,text='+ Novo',style='Primary.TButton',command=self.safe(lambda:edit(True))).pack(side='right')
         tree.bind('<Double-1>',lambda e:self.safe(edit)());search.trace_add('write',refresh);refresh()

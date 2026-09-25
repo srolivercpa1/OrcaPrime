@@ -1,7 +1,13 @@
-# OrçaPrime 1.0 — Layout moderno
+# OrçaPrime 1.0 — Premium
 
-Nova identidade visual com cartões arredondados, indicadores em destaque, barra lateral refinada e tabelas renovadas. Mantém os recursos da versão 2.1.1, incluindo OS, garantias, impressão, relatórios, permissões e botão de olho nos campos de senha.
+Identidade visual baseada nas três referências fornecidas: painel azul-marinho/azul elétrico, logo original no aplicativo e no ícone Windows, login e cadastro com campos e botões arredondados. Tema aplicado às abas de serviço, tabelas, formulários, histórico e observações.
 
-A versão exibida é 1.0, conforme solicitado. O release usa a identificação `v1.0-modern` para preservar o release histórico `v1.0.0`. A alteração de versão não reverte o banco nem remove recursos.
+Painel responsivo com indicadores, ações rápidas, agenda ligada às OS e resumo dos prazos de hoje. Atalhos preservam as permissões de cada perfil. Layout adapta a coluna lateral e os cartões em janelas menores.
 
-98 testes locais aprovados com interface gráfica virtual. Instalador publicado somente após testes Windows, empacotamento e verificação de abertura. Impressão física depende do equipamento. Emissão fiscal continua não configurada.
+A versão exibida permanece 1.0. A identificação `v1.0-premium` preserva os releases anteriores. A mudança visual não reverte dados nem remove funções. O login continua exigindo senha; não foi adicionado armazenamento de senha nem entrada automática.
+
+Distribuição: instalador Windows e ZIP portátil com executável, runtime e dependências. Extraia o ZIP inteiro antes de abrir o EXE. Ambos usam a mesma pasta de dados em `%LOCALAPPDATA%\OrcaPrime`.
+
+Validação: testes automatizados com interface gráfica, inspeção de painel/login/cadastro/editor de OS e revisão independente. Publicação condicionada aos testes Windows, compilação e verificação de abertura do executável.
+
+Impressão física depende do equipamento do usuário. Emissão fiscal continua não configurada.

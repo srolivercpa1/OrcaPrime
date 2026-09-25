@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from .widgets import BG, heading, table
+from .widgets import BG, NAVY, CYAN, FONT, MUTED, heading, table
+from .branding import brand_header, apply_icon
 from .users import Users, ROLES
 from .rounded_entry import RoundedEntry
 
@@ -8,8 +9,10 @@ from .rounded_entry import RoundedEntry
 def authenticate_window(root,store):
     users=Users(store);setup=not users.has_users();result=[]
     win=tk.Toplevel(root);win.title('Configurar acesso' if setup else 'Entrar no OrçaPrime')
-    win.geometry('520x560' if setup else '520x450');win.minsize(500,560 if setup else 450);win.configure(bg=BG)
-    body=ttk.Frame(win,padding=28);body.pack(fill='both',expand=True)
+    win.geometry('660x690' if setup else '660x540');win.minsize(560,660 if setup else 520);win.configure(bg=BG);apply_icon(win)
+    top=tk.Frame(win,bg=NAVY);top.pack(fill='x')
+    brand_header(top,NAVY,46).pack(anchor='w',padx=24,pady=12)
+    body=ttk.Frame(win,padding=(36,28));body.pack(fill='both',expand=True)
     heading(body,'Crie seu acesso' if setup else 'Bem-vindo de volta','Configure o administrador da sua assistência.' if setup else 'Entre para acessar a assistência técnica.')
     ttk.Label(body,text='Usuário').pack(anchor='w');username=tk.StringVar();entry=RoundedEntry(body,textvariable=username);entry.pack(fill='x',pady=(4,12))
     ttk.Label(body,text='Senha (mínimo 10 caracteres)' if setup else 'Senha').pack(anchor='w')
@@ -24,8 +27,8 @@ def authenticate_window(root,store):
             result.append(actor);password.set('');confirmation.set('');win.destroy()
         except ValueError as error:messagebox.showerror('Acesso',str(error),parent=win)
     ttk.Button(body,text='Criar administrador' if setup else 'Entrar',style='Primary.TButton',command=submit).pack(fill='x',pady=12)
-    ttk.Label(body,text='Sem conta online e sem mensalidade. Guarde sua senha em local seguro.',style='Sub.TLabel',wraplength=400).pack(anchor='w')
-    win.bind('<Return>',lambda e:submit());entry.focus_set();win.grab_set();root.wait_window(win)
+    ttk.Label(body,text='Sem conta online e sem mensalidade. Guarde sua senha em local seguro.',style='Sub.TLabel',wraplength=540).pack(anchor='w')
+    win.bind('<Return>',lambda e:submit());win.bind('<Escape>',lambda e:win.destroy());entry.focus_set();win.grab_set();root.wait_window(win)
     return result[0] if result else None
 
 
@@ -38,7 +41,7 @@ class UserPages:
         rows=users.list(self.actor)
         for row in rows:tree.insert('','end',iid=str(row['id']),values=(row['username'],row['name'],row['role'],'Sim' if row['active'] else 'Não'))
         def edit(existing=None):
-            data=existing or {};win=tk.Toplevel(self.root);win.title('Editar usuário' if existing else 'Criar usuário');win.geometry('540x650');win.minsize(520,650);win.configure(bg=BG)
+            data=existing or {};win=tk.Toplevel(self.root);win.title('Editar usuário' if existing else 'Criar usuário');win.geometry('540x650');win.minsize(520,650);win.configure(bg=BG);apply_icon(win)
             frame=ttk.Frame(win,padding=24);frame.pack(fill='both',expand=True);fields={}
             heading(frame,'Editar usuário' if existing else 'Novo usuário','Defina os dados de acesso e o perfil da equipe.')
             for key,label in [('username','Usuário'),('name','Nome'),('password','Nova senha (vazio mantém a atual)' if existing else 'Senha inicial — mínimo 10 caracteres')]:

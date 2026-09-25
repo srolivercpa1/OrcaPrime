@@ -21,3 +21,9 @@ $setup = Resolve-Path '.\release\OrcaPrime-Setup.exe'
 $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
 [IO.File]::WriteAllText("$setup.sha256", "$hash  OrcaPrime-Setup.exe`n", [Text.Encoding]::ASCII)
 Write-Host "Instalador: $setup"
+
+# Portable distribution retains the full PyInstaller runtime beside the EXE.
+$portable = Join-Path (Get-Location) 'release\OrcaPrime-Portable.zip'
+Compress-Archive -Path '.\dist\OrcaPrime' -DestinationPath $portable -Force
+$portableHash = (Get-FileHash $portable -Algorithm SHA256).Hash.ToLower()
+[IO.File]::WriteAllText("$portable.sha256", "$portableHash  OrcaPrime-Portable.zip`n", [Text.Encoding]::ASCII)

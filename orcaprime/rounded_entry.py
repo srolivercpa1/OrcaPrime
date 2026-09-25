@@ -2,7 +2,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
-from .widgets import BG, FONT, TEXT, TEAL, MUTED
+from .widgets import BG, FONT, TEXT, TEAL, MUTED, INPUT, BORDER, CYAN
 
 
 class RoundedEntry(tk.Canvas):
@@ -14,17 +14,17 @@ class RoundedEntry(tk.Canvas):
         super().__init__(parent, height=height, bg=BG, highlightthickness=0,
                          borderwidth=0, takefocus=False)
         self.entry = tk.Entry(self, textvariable=textvariable, show='•' if password else '',
-                              font=self.input_font, bg='white', fg=TEXT, insertbackground=TEXT,
+                              font=self.input_font, bg=INPUT, fg=TEXT, insertbackground=TEXT,
                               relief='flat', borderwidth=0, highlightthickness=0)
         self.entry_window = self.create_window(14, height / 2, anchor='w', window=self.entry)
         self.toggle_button = None
         if password:
             self.icons = [self._eye(False), self._eye(True)]
             self.toggle_button = tk.Button(self, text='Mostrar', image=self.icons[0], compound='left',
-                                          command=self.toggle, font=(FONT, 9), bg='white', fg=MUTED,
-                                          activebackground='#e8f4f2', activeforeground=TEAL,
+                                          command=self.toggle, font=(FONT, 9), bg=INPUT, fg=MUTED,
+                                          activebackground='#10325b', activeforeground=TEAL,
                                           relief='flat', borderwidth=0, cursor='hand2',
-                                          highlightthickness=1, highlightbackground='white',
+                                          highlightthickness=1, highlightbackground=INPUT,
                                           highlightcolor=TEAL, takefocus=True, padx=5)
             self.button_window = self.create_window(0, height / 2, anchor='e', window=self.toggle_button)
             self.toggle_button.bind('<Return>', lambda event: (self.toggle(), 'break')[1])
@@ -45,13 +45,13 @@ class RoundedEntry(tk.Canvas):
 
     def _draw(self, event=None):
         width, height = self.winfo_width(), self.winfo_height()
-        radius = 12
+        radius = 22
         self.delete('border')
         self.create_polygon(1+radius, 1, width-radius-1, 1, width-1, 1, width-1, 1+radius,
                             width-1, height-radius-1, width-1, height-1, width-radius-1, height-1,
                             radius+1, height-1, 1, height-1, 1, height-radius-1, 1, radius+1, 1, 1,
-                            smooth=True, splinesteps=24, fill='white',
-                            outline=TEAL if self.entry.focus_get() == self.entry else '#cbd5e1',
+                            smooth=True, splinesteps=24, fill=INPUT,
+                            outline=TEAL if self.entry.focus_get() == self.entry else '#087ee4',
                             width=2, tags='border')
         self.tag_lower('border')
         reserved = self.toggle_button.winfo_reqwidth() + 12 if self.toggle_button else 0
