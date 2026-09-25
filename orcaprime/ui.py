@@ -15,9 +15,11 @@ from .workshop_ui import WorkshopPages
 from .workshop import Workshop
 from .dashboard_ui import DashboardPages
 from .user_ui import UserPages
+from .backup_ui import BackupPages
+from .remembered_login import RememberedLogin
 from . import __version__
 
-class App(DashboardPages, WorkshopPages, UserPages):
+class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
     def __init__(self,root,store,license_client=None,auto_start=True,actor=None):
         self.actor=actor or {'id':0,'name':'Local','role':'ADMIN'};self.current_page=None
         self.workshop=Workshop(store,self.actor)
@@ -36,6 +38,11 @@ class App(DashboardPages, WorkshopPages, UserPages):
         if any(isinstance(w,tk.Toplevel) for w in self.root.winfo_children()):
             if not messagebox.askyesno('Fechar OrçaPrime','Há uma edição aberta. Encerrar e descartar as alterações não salvas?',parent=self.root):return
         self.closed=True;self.root.destroy()
+    def forget_login(self):
+        if messagebox.askyesno('Sair','Esquecer os dados de login salvos e fechar o programa? Salve suas alterações antes de continuar.',parent=self.root):
+            RememberedLogin(self.store.path.parent).clear()
+            self.closed=True;self.root.destroy()
+
     def poll(self):
         if self.closed:return
         try:
@@ -107,7 +114,7 @@ class App(DashboardPages, WorkshopPages, UserPages):
             retry=ttk.Button(box,text='Validar ativação existente',command=lambda:start(self.license.validate));retry.pack(fill='x');buttons.append(retry)
             if not notice:start(self.license.validate)
         ttk.Label(box,text='Licença individual | Validação segura pela internet',style='Sub.TLabel').pack(pady=20)
-        ttk.Label(host,text='Desenvolvido por OLIVERTECH SOLUÇÕES',style='Sub.TLabel').pack(pady=20)
+        ttk.Label(host,text='Desenvolvido por Sketch Inc',style='Sub.TLabel').pack(pady=20)
         entry.focus_set()
     def allowed_pages(self):
         common={'orders','warranties','license'}
@@ -161,7 +168,8 @@ class App(DashboardPages, WorkshopPages, UserPages):
             self.nav_icons[key]=line_icon(menu,key)
             b=ttk.Button(menu,image=self.nav_icons[key],compound='left',text=label,style='Nav.TButton',cursor='hand2',command=self.safe(lambda k=key:self.navigate(k)))
             b.pack(fill='x',padx=12,pady=2);self.nav_buttons[key]=b
-        tk.Label(nav,text='OLIVERTECH SOLUÇÕES\nv'+__version__,bg=NAVY,fg='#87a5c5',font=(FONT,9),justify='left').pack(anchor='w',padx=22,pady=22)
+        ttk.Button(menu,text='Esquecer acesso e sair',command=self.forget_login).pack(fill='x',padx=12,pady=12)
+        tk.Label(nav,text='Sketch Inc\nv'+__version__,bg=NAVY,fg='#87a5c5',font=(FONT,9),justify='left').pack(anchor='w',padx=22,pady=22)
         main=ttk.Frame(self.root);main.pack(side='left',fill='both',expand=True)
         header=ttk.Frame(main,padding=(24,20),style='Header.TFrame');header.pack(fill='x')
         greeting=ttk.Frame(header,style='Header.TFrame');greeting.pack(side='left')
@@ -259,29 +267,16 @@ class App(DashboardPages, WorkshopPages, UserPages):
             ttk.Label(self.body,text=label).pack(anchor='w',pady=(7,2));v=tk.StringVar(value=values.get(key,''));fields[key]=v;ttk.Entry(self.body,textvariable=v).pack(fill='x')
         def save():self.store.save_company({k:v.get() for k,v in fields.items()});messagebox.showinfo('Empresa','Dados da empresa salvos.')
         ttk.Button(self.body,text='Salvar dados',style='Primary.TButton',command=self.safe(save)).pack(anchor='e',pady=20)
-    def page_backup(self):
-        heading(self.body,'Proteja seus dados.','Faça cópias periódicas e guarde-as em um local seguro.')
-        ttk.Label(self.body,text='O backup contém clientes, catálogo, empresa e orçamentos. Guarde uma cópia em outro dispositivo.',wraplength=720).pack(anchor='w',pady=20)
-        def backup():
-            p=filedialog.asksaveasfilename(defaultextension='.db',initialfile='OrcaPrime-Backup-'+datetime.now().strftime('%Y%m%d-%H%M')+'.db',filetypes=[('Backup OrçaPrime','*.db')])
-            if p:self.store.backup(p);messagebox.showinfo('Backup','Cópia de segurança criada.')
-        def restore():
-            p=filedialog.askopenfilename(filetypes=[('Backup OrçaPrime','*.db')])
-            if p and messagebox.askyesno('Restaurar backup','Substituir os dados atuais pelo backup? Uma cópia prévia será preservada automaticamente.'):
-                self.store.restore(p);messagebox.showinfo('Restauração','Backup restaurado. Abra o programa novamente para entrar com os usuários do backup.');self.closed=True;self.root.destroy()
-        ttk.Button(self.body,text='Criar backup',style='Primary.TButton',command=self.safe(backup)).pack(anchor='w',pady=10)
-        ttk.Button(self.body,text='Restaurar backup',command=self.safe(restore)).pack(anchor='w',pady=10)
-        ttk.Label(self.body,text='Pasta de dados: '+str(self.store.path.parent),style='Sub.TLabel',wraplength=760).pack(anchor='w',pady=30)
     def page_license(self):
         if self.license is None:
-            heading(self.body,'OrçaPrime gratuito','Orçamentos, clientes e produtos sem mensalidade.')
-            ttk.Label(self.body,text='Funciona sem internet e sem código de ativação.\nSeus dados ficam neste computador. Faça backups regularmente.',wraplength=700).pack(anchor='w',pady=25)
-            ttk.Label(self.body,text='Desenvolvido por OLIVERTECH SOLUÇÕES',style='Sub.TLabel').pack(anchor='w')
+            heading(self.body,'Sobre o OrçaPrime','Software pago — Desenvolvido por Sketch Inc')
+            ttk.Label(self.body,text='Ambiente de desenvolvimento. A distribuição comercial exige licença online.\nSeus dados ficam neste computador. Faça backups regularmente.',wraplength=700).pack(anchor='w',pady=25)
+            ttk.Label(self.body,text='Desenvolvido por Sketch Inc',style='Sub.TLabel').pack(anchor='w')
             return
-        heading(self.body,'Minha licença','Sua chave permanece protegida após a ativação.')
+        heading(self.body,'Minha licença','Software pago — Desenvolvido por Sketch Inc')
         p=self.license.payload
         for label,value in [('Código',p['mask']),('Plano',p['plan']),('Situação','ATIVA'),('Vencimento',datetime.fromtimestamp(p['expires_at']).strftime('%d/%m/%Y %H:%M') if p['expires_at'] else 'Permanente')]:
             ttk.Label(self.body,text=label,style='Sub.TLabel').pack(anchor='w',pady=(12,3));ttk.Label(self.body,text=value,font=(FONT,15,'bold')).pack(anchor='w')
         ttk.Label(self.body,text='A validação é feita ao abrir e durante o uso. Mantenha a conexão com a internet.',wraplength=700).pack(anchor='w',pady=25)
         ttk.Button(self.body,text='Trocar código de ativação',command=lambda:self.show_activation('Informe o novo código.')).pack(anchor='w')
-        ttk.Label(self.body,text='OrçaPrime 1.0.0\nDesenvolvido por OLIVERTECH SOLUÇÕES\n© 2026 Mateus Oliveira',style='Sub.TLabel').pack(anchor='w',pady=30)
+        ttk.Label(self.body,text='OrçaPrime 1.0.0\nDesenvolvido por Sketch Inc\n© 2026 Mateus Oliveira',style='Sub.TLabel').pack(anchor='w',pady=30)

@@ -6,8 +6,8 @@ root = Path(__file__).resolve().parents[1]
 source = root / 'assets' / 'brand.png'
 with Image.open(source) as original:
     image = original.convert('RGBA')
-    image.save(root/'assets'/'orcaprime-premium-r2.ico', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])
+    image.save(root/'assets'/'orcaprime-commercial.ico', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])
     image.save(root/'assets'/'orcaprime.png')
 
 # Compatibility copy for existing build tooling.
-(root/'assets'/'orcaprime.ico').write_bytes((root/'assets'/'orcaprime-premium-r2.ico').read_bytes())
+(root/'assets'/'orcaprime.ico').write_bytes((root/'assets'/'orcaprime-commercial.ico').read_bytes())

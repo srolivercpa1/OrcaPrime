@@ -4,7 +4,7 @@ import struct
 import pefile
 
 root=Path(__file__).resolve().parents[1]
-data=(root/'assets/orcaprime-premium-r2.ico').read_bytes()
+data=(root/'assets/orcaprime-commercial.ico').read_bytes()
 _,kind,count=struct.unpack_from('<HHH',data)
 assert kind==1 and count>=5,'Expected a multi-size Windows icon'
 expected=[]

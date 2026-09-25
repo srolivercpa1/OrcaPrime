@@ -16,7 +16,7 @@ def brand_image(master, size=64):
 
 def apply_icon(window):
     if sys.platform=='win32':
-        window.iconbitmap(str(asset_path('orcaprime-premium-r2.ico')))
+        window.iconbitmap(str(asset_path('orcaprime-commercial.ico')))
     window._brand_icon = brand_image(window, 64)
     window.iconphoto(True, window._brand_icon)
 

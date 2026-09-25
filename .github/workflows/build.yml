@@ -81,4 +81,4 @@ jobs:
             echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Premium R2" --notes "Revisão visual Premium R2: abas e painéis arredondados, cartões com degradê, navegação renovada e login refinado. Novo ícone verificado dentro do EXE e aplicado explicitamente aos atalhos e à barra de tarefas. Exibição 1.0; revisão do instalador 1.0.1. Dados preservados." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 release/OrcaPrime-Portable.zip release/OrcaPrime-Portable.zip.sha256
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Comercial" --notes "Licenciamento online, painel privado Sketch Inc, login salvo protegido pelo Windows, backup ZIP diário e novo ícone transparente. Instalador revisão 1.0.2. Veja docs/STATUS_ENTREGA.md." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 release/OrcaPrime-Portable.zip release/OrcaPrime-Portable.zip.sha256
