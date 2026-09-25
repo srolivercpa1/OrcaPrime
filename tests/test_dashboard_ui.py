@@ -66,6 +66,7 @@ def test_title_widget_uses_title_style_not_global_small_font(tmp_path):
     root=tk.Tk()
     try:
         app=App(root,Store(tmp_path/'db'),auto_start=False);app.show_main();root.update()
+        app.navigate('orders');root.update()
         title=next(w for w in app.body.winfo_children() if isinstance(w,ttk.Label) and w.cget('style')=='Title.TLabel')
         effective=title.cget('font') or ttk.Style(root).lookup('Title.TLabel','font')
         assert font.Font(root,font=effective).actual('size')>=20

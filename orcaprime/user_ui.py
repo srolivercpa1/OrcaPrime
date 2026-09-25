@@ -9,17 +9,20 @@ from .rounded_entry import RoundedEntry
 def authenticate_window(root,store):
     users=Users(store);setup=not users.has_users();result=[]
     win=tk.Toplevel(root);win.title('Configurar acesso' if setup else 'Entrar no OrçaPrime')
-    win.geometry('660x690' if setup else '660x540');win.minsize(560,660 if setup else 520);win.configure(bg=BG);apply_icon(win)
+    win.geometry('700x740' if setup else '700x620');win.minsize(600,710 if setup else 590);win.configure(bg=BG);apply_icon(win)
     top=tk.Frame(win,bg=NAVY);top.pack(fill='x')
     brand_header(top,NAVY,46).pack(anchor='w',padx=24,pady=12)
     body=ttk.Frame(win,padding=(36,28));body.pack(fill='both',expand=True)
-    heading(body,'Crie seu acesso' if setup else 'Bem-vindo de volta','Configure o administrador da sua assistência.' if setup else 'Entre para acessar a assistência técnica.')
-    ttk.Label(body,text='Usuário').pack(anchor='w');username=tk.StringVar();entry=RoundedEntry(body,textvariable=username);entry.pack(fill='x',pady=(4,12))
+    title=tk.Frame(body,bg=BG);title.pack(anchor='w',pady=(0,8))
+    tk.Label(title,text='Crie seu ' if setup else 'Bem-vindo de ',font=(FONT,26,'bold'),fg='#f3f7ff',bg=BG,padx=0).pack(side='left')
+    tk.Label(title,text='acesso' if setup else 'volta',font=(FONT,26,'bold'),fg=CYAN,bg=BG,padx=0).pack(side='left')
+    ttk.Label(body,text='Configure o administrador da sua assistência.' if setup else 'Entre para acessar a assistência técnica.',font=(FONT,12),style='Sub.TLabel',wraplength=580).pack(anchor='w',pady=(0,24))
+    ttk.Label(body,text='Usuário').pack(anchor='w');username=tk.StringVar();entry=RoundedEntry(body,textvariable=username,placeholder='Digite seu usuário');entry.pack(fill='x',pady=(4,12))
     ttk.Label(body,text='Senha (mínimo 10 caracteres)' if setup else 'Senha').pack(anchor='w')
-    password=tk.StringVar();RoundedEntry(body,textvariable=password,password=True).pack(fill='x',pady=(4,12))
+    password=tk.StringVar();RoundedEntry(body,textvariable=password,password=True,placeholder='Digite sua senha').pack(fill='x',pady=(4,12))
     confirmation=tk.StringVar()
     if setup:
-        ttk.Label(body,text='Confirme a senha').pack(anchor='w');RoundedEntry(body,textvariable=confirmation,password=True).pack(fill='x',pady=(4,12))
+        ttk.Label(body,text='Confirme a senha').pack(anchor='w');RoundedEntry(body,textvariable=confirmation,password=True,placeholder='Repita sua senha').pack(fill='x',pady=(4,12))
     def submit():
         try:
             if setup and password.get()!=confirmation.get():raise ValueError('As senhas não coincidem.')

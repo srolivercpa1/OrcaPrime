@@ -7,6 +7,7 @@ function Run-Python {
 Run-Python -m pytest -q
 Run-Python scripts/make_icon.py
 Run-Python -m PyInstaller --clean --noconfirm OrcaPrime.spec
+Run-Python scripts/verify_windows_icon.py
 $process = Start-Process '.\dist\OrcaPrime\OrcaPrime.exe' -PassThru
 Start-Sleep -Seconds 6
 $process.Refresh()

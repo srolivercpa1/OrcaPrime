@@ -2,21 +2,30 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from PIL import Image, ImageDraw, ImageTk
+from .branding import line_icon
 from .widgets import BG, FONT, TEXT, TEAL, MUTED, INPUT, BORDER, CYAN
 
 
 class RoundedEntry(tk.Canvas):
-    def __init__(self, parent, textvariable, password=False):
+    def __init__(self, parent, textvariable, password=False,placeholder=''):
         self.password = password
         self.revealed = False
-        self.input_font = tkfont.Font(family=FONT, size=11)
-        height = max(46, self.input_font.metrics('linespace') + 24)
+        self.input_font = tkfont.Font(family=FONT, size=12)
+        height = max(54, self.input_font.metrics('linespace') + 24)
         super().__init__(parent, height=height, bg=BG, highlightthickness=0,
                          borderwidth=0, takefocus=False)
         self.entry = tk.Entry(self, textvariable=textvariable, show='•' if password else '',
                               font=self.input_font, bg=INPUT, fg=TEXT, insertbackground=TEXT,
                               relief='flat', borderwidth=0, highlightthickness=0)
-        self.entry_window = self.create_window(14, height / 2, anchor='w', window=self.entry)
+        self.entry_window = self.create_window(46, height / 2, anchor='w', window=self.entry)
+        self.field_icon=line_icon(self,'lock' if password else 'customers',CYAN,24)
+        self.icon_item=self.create_image(25,height/2,image=self.field_icon)
+        self.hint=tk.Label(self,text=placeholder,font=self.input_font,bg=INPUT,fg=MUTED,bd=0)
+        self.hint.bind('<Button-1>',lambda e:self.entry.focus_set())
+        self.hint_window=self.create_window(46,height/2,anchor='w',window=self.hint,state='normal' if placeholder else 'hidden')
+        self.variable=textvariable;self.placeholder=placeholder
+        self.trace=textvariable.trace_add('write',lambda *_:self._draw())
+        self.bind('<Destroy>',self._cleanup,add='+')
         self.toggle_button = None
         if password:
             self.icons = [self._eye(False), self._eye(True)]
@@ -55,10 +64,17 @@ class RoundedEntry(tk.Canvas):
                             width=2, tags='border')
         self.tag_lower('border')
         reserved = self.toggle_button.winfo_reqwidth() + 12 if self.toggle_button else 0
-        self.itemconfigure(self.entry_window, width=max(20, width-28-reserved))
-        self.coords(self.entry_window, 14, height/2)
+        self.itemconfigure(self.entry_window, width=max(20, width-60-reserved))
+        self.coords(self.entry_window, 46, height/2)
+        self.coords(self.hint_window,46,height/2)
+        self.coords(self.icon_item,25,height/2)
+        self.itemconfigure(self.hint_window,state='normal' if self.placeholder and not self.variable.get() and self.focus_get()!=self.entry else 'hidden')
         if self.toggle_button:
             self.coords(self.button_window, width-10, height/2)
+
+    def _cleanup(self,event):
+        if event.widget is self:
+            self.variable.trace_remove('write',self.trace)
 
     def toggle(self):
         self.revealed = not self.revealed

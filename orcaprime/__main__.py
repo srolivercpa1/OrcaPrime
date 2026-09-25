@@ -10,11 +10,14 @@ from .maintenance import daily_backup
 from .widgets import styles
 
 def main():
+    if sys.platform=='win32':
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('OliverTech.OrcaPrime.Premium')
     root=tk.Tk()
     root.report_callback_exception=lambda kind,value,trace:messagebox.showerror('OrçaPrime','Não foi possível concluir a operação. Verifique os dados e tente novamente.',parent=root)
     base=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parent.parent))
     data=Path(os.environ.get('LOCALAPPDATA',Path.home()/'.local'/'share'))/'OrcaPrime'
-    try:root.iconbitmap(str(base/'assets'/'orcaprime.ico'))
+    try:root.iconbitmap(str(base/'assets'/'orcaprime-premium-r2.ico'))
     except tk.TclError:pass
     store=Store(data/'orcaprime.db')
     try: daily_backup(store)

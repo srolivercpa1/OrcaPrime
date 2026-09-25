@@ -15,6 +15,8 @@ def brand_image(master, size=64):
 
 
 def apply_icon(window):
+    if sys.platform=='win32':
+        window.iconbitmap(str(asset_path('orcaprime-premium-r2.ico')))
     window._brand_icon = brand_image(window, 64)
     window.iconphoto(True, window._brand_icon)
 
@@ -37,7 +39,9 @@ def brand_header(parent, bg, size=48):
 def line_icon(master, kind, color='#aec5e8', size=22):
     """Small, consistent navigation pictograms drawn independently of system fonts."""
     im=Image.new('RGBA',(72,72));d=ImageDraw.Draw(im);c=color
-    if kind in ('customers','users'):
+    if kind == 'lock':
+        d.arc((22,8,50,44),0,180,fill=c,width=5);d.arc((22,8,50,44),180,360,fill=c,width=5);d.rounded_rectangle((15,29,57,63),radius=6,fill=c);d.line((36,40,36,52),fill='#061a34',width=5)
+    elif kind in ('customers','users'):
         d.ellipse((25,7,47,29),outline=c,width=5);d.arc((13,34,59,72),180,360,fill=c,width=5);d.line((13,53,59,53),fill=c,width=5)
     elif kind in ('dashboard','company'):
         d.line((9,33,36,10,63,33),fill=c,width=5);d.rectangle((18,32,54,61),outline=c,width=5);d.rectangle((30,43,42,61),outline=c,width=4)

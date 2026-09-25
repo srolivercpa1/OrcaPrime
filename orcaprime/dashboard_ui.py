@@ -4,6 +4,7 @@ from tkinter import ttk
 from datetime import date
 from .widgets import FONT, heading, table, BG, CARD, TEXT, TEAL, MUTED, BORDER, CYAN
 from .modern_widgets import MetricCard, WelcomeBanner
+from .surfaces import RoundPanel
 from .branding import brand_header
 from .workshop_ui import scroll_frame
 from .workshop_queries import OrderFilters
@@ -20,7 +21,6 @@ class DashboardPages:
 
     def page_dashboard(self):
         data=self.workshop.dashboard();self.dashboard_values=data
-        heading(self.body,'Visão geral','Gestão completa para sua assistência técnica.')
         body=scroll_frame(self.body)
         body.columnconfigure(0,weight=1)
         left=ttk.Frame(body);left.grid(row=0,column=0,sticky='nsew')
@@ -41,8 +41,8 @@ class DashboardPages:
             for i,card in enumerate(self.dashboard_cards.values()):card.grid(row=i//columns,column=i%columns,sticky='nsew',padx=(0,8 if i%columns<columns-1 else 0),pady=(0,10))
         cards.bind('<Configure>',layout_cards);layout_cards()
         def panel(parent,title):
-            outer=tk.Frame(parent,bg=CARD,highlightbackground=BORDER,highlightthickness=1,padx=16,pady=16)
-            outer.pack(fill='x',pady=(0,16))
+            shell=RoundPanel(parent);shell.pack(fill='x',pady=(0,16))
+            outer=shell.content
             tk.Label(outer,text=title,bg=CARD,fg=TEXT,font=(FONT,13,'bold'),anchor='w').pack(fill='x',pady=(0,14))
             return outer
         quick=panel(right,'Ações rápidas')
@@ -81,5 +81,5 @@ class DashboardPages:
         def responsive(event=None):
             wide=body.winfo_width()>=1020
             right.grid(row=0 if wide else 1,column=1 if wide else 0,sticky='new',padx=(18,0) if wide else 0,pady=(0,0) if wide else (18,0))
-            body.columnconfigure(1,weight=0,minsize=286 if wide else 0)
+            body.columnconfigure(1,weight=0,minsize=320 if wide else 0)
         body.bind('<Configure>',responsive,add='+');responsive()
