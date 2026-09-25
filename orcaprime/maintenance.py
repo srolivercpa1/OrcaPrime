@@ -24,8 +24,7 @@ def _backup_lock(folder):
     with open(folder/'.orcaprime-backup.lock','a+b') as lock:
         if os.name=='nt':
             import msvcrt
-            lock.seek(0)
-            if not lock.read(1):lock.write(b'0');lock.flush()
+            # Windows permits locking beyond EOF; never read an already locked byte.
             lock.seek(0)
             msvcrt.locking(lock.fileno(),msvcrt.LK_LOCK,1)
             try:yield
