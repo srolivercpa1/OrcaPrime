@@ -135,3 +135,12 @@ class LicenseService:
         with self.db() as db:
             db.execute('DELETE FROM devices WHERE license_id=? AND device_id=?',(id_,device));self.audit(db,'release-device',id_)
         return self.get(id_)
+
+    def delete(self,id_):
+        """End a contract atomically; retain audit events, never customer data."""
+        with self.db() as db:
+            if not db.execute('SELECT 1 FROM licenses WHERE id=?',(id_,)).fetchone():
+                raise LicenseError('invalid')
+            db.execute('DELETE FROM devices WHERE license_id=?',(id_,))
+            db.execute('DELETE FROM licenses WHERE id=?',(id_,))
+            self.audit(db,'delete',id_)

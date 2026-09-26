@@ -94,3 +94,28 @@ def test_trusted_proxy_separates_client_rate_limits(svc):
     for _ in range(120):assert c.get('/health',headers={'X-Forwarded-For':'203.0.113.5'}).status_code==200
     assert c.get('/health',headers={'X-Forwarded-For':'203.0.113.5'}).status_code==429
     assert c.get('/health',headers={'X-Forwarded-For':'203.0.113.6'}).status_code==200
+
+
+def test_delete_revokes_code_tokens_and_preserves_other_license(svc):
+    lic=svc.create('PRO',30,1);other=svc.create('EMPRESA',0,1)
+    response=svc.activate(lic['code'],'device-1234567890','nonce-1234567890')
+    token=verify_envelope(response,svc.signing_key.public_key(),'device-1234567890','nonce-1234567890')['device_token']
+    svc.delete(lic['id'])
+    assert [x['id'] for x in svc.list()]==[other['id']]
+    with pytest.raises(LicenseError):svc.activate(lic['code'],'device-1234567890','nonce-1234567890')
+    with pytest.raises(LicenseError):svc.validate(token,'device-1234567890','nonce-1234567890')
+    with pytest.raises(LicenseError):svc.renew(lic['id'],30)
+    with svc.db() as db:
+        assert db.execute('SELECT COUNT(*) FROM devices WHERE license_id=?',(lic['id'],)).fetchone()[0]==0
+        assert db.execute("SELECT COUNT(*) FROM audit WHERE license_id=? AND action='delete'",(lic['id'],)).fetchone()[0]==1
+
+
+def test_delete_api_requires_owner_origin_and_matching_confirmation(svc):
+    c=TestClient(create_app(svc,'admin',password_hash('a-long-owner-password'),'https://licenses.example.com'),base_url='https://licenses.example.com')
+    lic=svc.create('PRO',30,1);path='/admin/licenses/'+lic['id'];auth=('admin','a-long-owner-password')
+    assert c.request('DELETE',path,json={'confirmation':lic['id']}).status_code==401
+    assert c.request('DELETE',path,auth=auth,json={'confirmation':'wrong'}).status_code==422
+    assert c.request('DELETE',path,auth=auth,json={'confirmation':lic['id']},headers={'Origin':'https://evil.example'}).status_code==403
+    assert svc.get(lic['id'])['status']=='ATIVA'
+    assert c.request('DELETE',path,auth=auth,json={'confirmation':lic['id']}).json()=={'deleted':True}
+    assert c.request('DELETE',path,auth=auth,json={'confirmation':lic['id']}).status_code==400

@@ -33,6 +33,10 @@ class UpdateLicense(BaseModel):
     status: Literal['ATIVA','BLOQUEADA','EXPIRADA','CANCELADA']|None=None
     expires_at: int|None=Field(default=None,ge=1)
     device_limit: int|None=Field(default=None,ge=1,le=1000)
+class DeleteLicense(BaseModel):
+    model_config=ConfigDict(extra='forbid')
+    confirmation: str=Field(min_length=1,max_length=100)
+
 class Renewal(BaseModel):
     days: Literal[0,30,90,365]
 
@@ -80,6 +84,8 @@ def create_app(service,admin_user,admin_hash,public_origin):
     def validate(data:Validation): return service.validate(data.token,data.device_id,data.nonce)
     @app.get('/admin',dependencies=[Depends(owner)])
     def panel(): return FileResponse(Path(__file__).with_name('admin.html'))
+    @app.get('/admin/brand.png',dependencies=[Depends(owner)])
+    def brand(): return FileResponse(Path(__file__).with_name('brand.png'),media_type='image/png')
     @app.get('/admin/app.js',dependencies=[Depends(owner)])
     def javascript(): return FileResponse(Path(__file__).with_name('admin.js'),media_type='application/javascript')
     @app.get('/admin/style.css',dependencies=[Depends(owner)])
@@ -94,6 +100,11 @@ def create_app(service,admin_user,admin_hash,public_origin):
     def create(data:NewLicense): return service.create(data.plan,data.days,data.device_limit)
     @app.get('/admin/licenses/{id_}',dependencies=[Depends(owner)])
     def get(id_:str): return service.get(id_)
+    @app.delete('/admin/licenses/{id_}',dependencies=[Depends(owner)])
+    def delete(id_:str,data:DeleteLicense):
+        if data.confirmation!=id_:raise ValueError('Confirme a licença selecionada antes de excluir.')
+        service.delete(id_)
+        return {'deleted':True}
     @app.patch('/admin/licenses/{id_}',dependencies=[Depends(owner)])
     def update(id_:str,data:UpdateLicense): return service.update(id_,data.model_dump(exclude_unset=True))
     @app.post('/admin/licenses/{id_}/renew',dependencies=[Depends(owner)])

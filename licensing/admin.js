@@ -5,13 +5,29 @@ async function api(path='',method='GET',data){
  const response=await fetch('/admin/licenses'+path,{method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)});
  const value=await response.json();if(!response.ok)throw Error(value.detail||'Falha ao processar solicitação.');return value;
 }
-function message(text){$('message').textContent=text;}
+function message(text){$('message').textContent=text;if($('delete-dialog').open)$('delete-error').textContent=text;}
 function task(fn){return async event=>{event?.preventDefault();message('');const buttons=[...document.querySelectorAll('button')];buttons.forEach(b=>b.disabled=true);try{await fn();}catch(e){message(e.message);}finally{buttons.forEach(b=>b.disabled=false);}};}
 async function load(){const data=await api('?q='+encodeURIComponent($('search').value));$('rows').replaceChildren();for(const l of data){const tr=document.createElement('tr');for(const value of [l.mask,l.plan,l.status,l.expires_at?date(l.expires_at):(l.days===0||l.activated_at?'Permanente':'Após ativação'),`${l.activation_count} / ${l.device_limit}`]){const td=document.createElement('td');td.textContent=value;tr.append(td);}const td=document.createElement('td'),b=document.createElement('button');b.textContent='Gerenciar';b.onclick=task(()=>details(l.id));td.append(b);tr.append(td);$('rows').append(tr);}if(!data.length){const tr=document.createElement('tr'),td=document.createElement('td');td.colSpan=6;td.textContent='Nenhuma licença encontrada.';tr.append(td);$('rows').append(tr);}}
 async function details(id){selected=await api('/'+id);$('detail').hidden=false;$('license-id').textContent=`${selected.mask} · ID ${id}`;$('dates').textContent=`Criação: ${date(selected.created_at)} | Ativação: ${date(selected.activated_at)} | Última validação: ${date(selected.last_validated_at)}`;$('edit-plan').value=selected.plan;$('edit-status').value=selected.status;$('edit-limit').value=selected.device_limit;const d=selected.expires_at?new Date(selected.expires_at*1000):null;$('edit-expiry').value=d?new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16):'';$('edit-expiry').disabled=!selected.activated_at;$('devices').replaceChildren();for(const device of selected.devices){const p=document.createElement('p'),s=document.createElement('span'),b=document.createElement('button');s.textContent=`${device.device_id} · última validação ${date(device.last_validated_at)}`;b.textContent='Liberar dispositivo';b.onclick=task(async()=>{if(!confirm('Remover a ativação deste dispositivo?'))return;await api('/'+id+'/devices/'+encodeURIComponent(device.device_id),'DELETE');await details(id);await load();});p.append(s,b);$('devices').append(p);}if(!selected.devices.length)$('devices').textContent='Nenhum dispositivo ativado.';}
-$('create').onsubmit=task(async()=>{const value=await api('','POST',{plan:$('plan').value,days:Number($('days').value),device_limit:Number($('limit').value)});$('code').textContent=value.code;$('new-code').hidden=false;await load();});
+$('create').onsubmit=task(async()=>{const value=await api('','POST',{plan:$('plan').value,days:Number($('days').value),device_limit:Number($('limit').value)});$('new-code').dataset.licenseId=value.id;$('code').textContent=value.code;$('new-code').hidden=false;await load();});
 $('copy').onclick=task(async()=>{await navigator.clipboard.writeText($('code').textContent);message('Código copiado. Entregue-o somente ao cliente correspondente.');});
 $('search-form').onsubmit=task(load);
 $('edit').onsubmit=task(async()=>{if(!selected)return;const change={plan:$('edit-plan').value,status:$('edit-status').value,device_limit:Number($('edit-limit').value)};if(selected.activated_at)change.expires_at=$('edit-expiry').value?Math.floor(new Date($('edit-expiry').value).getTime()/1000):null;await api('/'+selected.id,'PATCH',change);await details(selected.id);await load();message('Licença atualizada.');});
 $('renew').onsubmit=task(async()=>{if(!selected||!confirm('Renovar e deixar esta licença ATIVA?'))return;await api('/'+selected.id+'/renew','POST',{days:Number($('renew-days').value)});await details(selected.id);await load();message('Licença renovada.');});
+$('delete-license').onclick=()=>{
+ if(!selected)return;
+ const dialog=$('delete-dialog');dialog.dataset.licenseId=selected.id;
+ $('delete-target').textContent=`${selected.mask} · ID ${selected.id}`;
+ $('delete-confirmation').value='';$('delete-error').textContent='';
+ dialog.showModal();$('delete-confirmation').focus();
+};
+$('delete-cancel').onclick=()=>$('delete-dialog').close();
+$('delete-form').onsubmit=task(async()=>{
+ const dialog=$('delete-dialog');const id=dialog.dataset.licenseId;
+ if(!id||$('delete-confirmation').value!=='EXCLUIR')throw Error('Digite EXCLUIR para confirmar.');
+ await api('/'+encodeURIComponent(id),'DELETE',{confirmation:id});
+ selected=null;$('detail').hidden=true;dialog.close();
+ if($('new-code').dataset.licenseId===id){$('new-code').hidden=true;$('code').textContent='';delete $('new-code').dataset.licenseId;}
+ await load();message('Licença excluída. O encerramento foi registrado.');
+});
 task(load)();
