@@ -8,6 +8,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from .widgets import heading, table
 from .domain import brl, decimal_text
+from .scrolling import bind_mousewheel
 
 
 def scroll_frame(parent):
@@ -17,6 +18,7 @@ def scroll_frame(parent):
     inner=ttk.Frame(canvas,padding=15);window=canvas.create_window((0,0),window=inner,anchor='nw')
     inner.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
     canvas.bind('<Configure>',lambda e:canvas.itemconfigure(window,width=e.width))
+    bind_mousewheel(canvas)
     return inner
 
 

@@ -26,7 +26,8 @@ def authenticate_window(root,store):
     window_id=viewport.create_window((0,0),window=body,anchor='nw')
     body.bind('<Configure>',lambda e:viewport.configure(scrollregion=viewport.bbox('all')))
     viewport.bind('<Configure>',lambda e:viewport.itemconfigure(window_id,width=e.width))
-    win.bind('<MouseWheel>',lambda e:viewport.yview_scroll(-1 if e.delta>0 else 1,'units'))
+    from .scrolling import bind_mousewheel
+    bind_mousewheel(viewport)
     title=tk.Frame(body,bg=BG);title.pack(anchor='w',pady=(0,8))
     tk.Label(title,text='Crie seu ' if setup else 'Bem-vindo de ',font=(FONT,26,'bold'),fg='#f3f7ff',bg=BG,padx=0).pack(side='left')
     tk.Label(title,text='acesso' if setup else 'volta',font=(FONT,26,'bold'),fg=CYAN,bg=BG,padx=0).pack(side='left')
@@ -91,7 +92,40 @@ class UserPages:
         ttk.Button(toolbar,text='Editar / redefinir senha',command=self.safe(selected)).pack(side='left',padx=8)
 
     def page_fiscal(self):
-        heading(self.body,'Documentos fiscais','Emissão fiscal não configurada')
-        ttk.Label(self.body,text='Esta versão gera ordens de serviço, orçamentos, recibos e termos de garantia. Esses documentos não são notas fiscais autorizadas.',wraplength=760).pack(anchor='w',pady=12)
-        ttk.Label(self.body,text='Para integrar a emissão de notas, é necessário definir cidade/UF, dados da empresa e o emissor utilizado. Nenhuma cobrança ou integração paga foi ativada.',wraplength=760).pack(anchor='w',pady=12)
-        ttk.Label(self.body,text='Utilize o emissor fiscal autorizado da sua empresa enquanto a integração não estiver disponível.',wraplength=760,style='Sub.TLabel').pack(anchor='w',pady=12)
+        from tkinter import filedialog
+        from .workshop_ui import scroll_frame
+        from .service_documents import list_printers, open_document, _pdf_path
+        from .document_actions import DocumentActions
+        heading(self.body,'Notas fiscais','Imprima o PDF fornecido pelo seu emissor fiscal.')
+        body=scroll_frame(self.body)
+        ttk.Label(body,text='Impressão de nota já emitida',font=(FONT,16,'bold')).pack(anchor='w',pady=(0,12))
+        ttk.Label(body,text='Selecione o DANFE, DANFSe ou outro PDF fornecido pelo emissor. O OrçaPrime encaminha o arquivo para impressão, sem alterar seu conteúdo ou verificar sua autorização fiscal.',wraplength=720).pack(anchor='w',pady=8)
+        path=tk.StringVar();printer=tk.StringVar(value=self._printer_settings().get('A4',''))
+        ttk.Label(body,textvariable=path,wraplength=720).pack(anchor='w',pady=8)
+        def select_pdf():
+            chosen=filedialog.askopenfilename(parent=self.root,title='Selecionar PDF da nota fiscal',filetypes=[('Documento PDF','*.pdf')])
+            if chosen:path.set(str(_pdf_path(chosen)))
+        ttk.Button(body,text='Selecionar PDF da nota',command=self.safe(select_pdf)).pack(anchor='w',pady=8)
+        ttk.Label(body,text='Impressora').pack(anchor='w')
+        combo=ttk.Combobox(body,textvariable=printer,state='readonly');combo.pack(fill='x',pady=6)
+        def refresh():
+            names=list_printers();combo.configure(values=names)
+            if printer.get() not in names:printer.set('')
+        ttk.Button(body,text='Atualizar impressoras',command=self.safe(refresh)).pack(anchor='w',pady=6)
+        try:refresh()
+        except (OSError,RuntimeError,ValueError) as error:
+            ttk.Label(body,text=str(error),wraplength=720).pack(anchor='w')
+        def selected():
+            if not path.get():raise ValueError('Selecione o PDF da nota primeiro.')
+            return _pdf_path(path.get())
+        def send():
+            self.guard()
+            DocumentActions(self.workshop,{}).send(selected(),printer.get())
+            messagebox.showinfo('Impressão','Solicitação enviada ao leitor PDF do Windows. Confira a fila da impressora.',parent=self.root)
+        actions=ttk.Frame(body);actions.pack(fill='x',pady=12)
+        ttk.Button(actions,text='Visualizar PDF',command=self.safe(lambda:open_document(selected()))).pack(side='left')
+        ttk.Button(actions,text='Imprimir nota',style='Primary.TButton',command=self.safe(send)).pack(side='left',padx=10)
+        ttk.Label(body,text='Use uma impressora compatível com o tamanho do PDF. A impressão utiliza o leitor PDF associado no Windows, que precisa oferecer suporte à impressão.',wraplength=720,style='Sub.TLabel').pack(anchor='w',pady=8)
+        ttk.Label(body,text='Emissão automática: integração pendente',font=(FONT,14,'bold')).pack(anchor='w',pady=(24,8))
+        ttk.Label(body,text='Para emitir dentro do OrçaPrime, é necessário configurar os dados fiscais da empresa, cidade/UF, regime tributário, credenciamento e certificado exigidos pelo emissor. Serviços usam integração NFS-e; venda de mercadorias requer a integração fiscal correspondente.',wraplength=720).pack(anchor='w',pady=8)
+        ttk.Label(body,text='Ordens de serviço, orçamentos, recibos e garantias não substituem notas fiscais. Esta tela imprime arquivos já emitidos; não transmite notas à prefeitura ou à SEFAZ.',wraplength=720,style='Sub.TLabel').pack(anchor='w',pady=8)

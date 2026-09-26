@@ -160,6 +160,8 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         scroll.pack(side='right',fill='y');canvas.pack(fill='both',expand=True);canvas.configure(yscrollcommand=scroll.set)
         menu=tk.Frame(canvas,bg=NAVY);win=canvas.create_window((0,0),window=menu,anchor='nw')
         menu.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')));canvas.bind('<Configure>',lambda e:canvas.itemconfigure(win,width=e.width))
+        from .scrolling import bind_mousewheel
+        bind_mousewheel(canvas)
         self.nav_buttons={};self.nav_icons={}
         for key,label in [('dashboard','Visão geral'),('orders','Ordens de serviço'),('customers','Clientes'),('quotes','Orçamentos'),('catalog','Produtos e serviços'),('stock','Estoque e peças'),('suppliers','Fornecedores'),('finance','Financeiro e caixa'),('warranties','Garantias e retornos'),('reports','Relatórios'),('printers','Impressoras'),('fiscal','Notas fiscais'),('users','Usuários'),('company','Minha empresa'),('backup','Backup e restauração'),('license','Sobre o OrçaPrime' if self.license is None else 'Minha licença')]:
             if key not in self.allowed_pages():continue

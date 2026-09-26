@@ -193,7 +193,8 @@ def list_printers() -> list[str]:
     try:
         result = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command',
                                  '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; @(Get-Printer | Select-Object -ExpandProperty Name) | ConvertTo-Json -Compress'],
-                                capture_output=True, text=True, encoding='utf-8', timeout=20, check=True)
+                                capture_output=True, text=True, encoding='utf-8', timeout=20, check=True,
+                                creationflags=0x08000000)  # Windows CREATE_NO_WINDOW
     except (OSError, subprocess.SubprocessError) as error:
         raise RuntimeError('Não foi possível consultar as impressoras do Windows. Verifique o serviço de impressão e os drivers.') from error
     names = json.loads(result.stdout or '[]')

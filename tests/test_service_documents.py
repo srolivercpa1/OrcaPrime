@@ -86,6 +86,13 @@ class ServiceDocumentsTest(unittest.TestCase):
         self.path.write_text('not a PDF')
         with self.assertRaises(ValueError): open_document(self.path)
 
+    def test_printer_query_hides_console_and_preserves_unicode_names(self):
+        from orcaprime.service_documents import list_printers
+        from types import SimpleNamespace
+        with patch('orcaprime.service_documents.sys.platform', 'win32'), patch('orcaprime.service_documents.subprocess.run', return_value=SimpleNamespace(stdout='["Recepção", "PDF"]')) as run:
+            self.assertEqual(list_printers(), ['Recepção', 'PDF'])
+            self.assertEqual(run.call_args.kwargs.get('creationflags'), 0x08000000)
+
 
 def test_service_pdf_embeds_font_for_consistent_printing(tmp_path):
     from orcaprime.service_documents import export_service_document
