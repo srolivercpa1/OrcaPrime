@@ -78,8 +78,7 @@ class DashboardPages:
             tk.Label(finance,text=f"Recebido: {brl(data['finance']['received_cents'])}    |    Pendente: {brl(data['finance']['balance_cents'])}",bg=CARD,fg=MUTED,wraplength=500).pack(anchor='w')
             ttk.Button(finance,text=f"Estoque: {len(data['low_stock'])} peças no mínimo ou abaixo",command=self.safe(lambda:self.navigate('stock'))).pack(anchor='w',pady=(12,0))
         ttk.Button(left,text='Atualizar painel',command=self.safe(lambda:self.navigate('dashboard'))).pack(anchor='w',pady=8)
-        def responsive(event=None):
-            wide=body.winfo_width()>=1020
-            right.grid(row=0 if wide else 1,column=1 if wide else 0,sticky='new',padx=(18,0) if wide else 0,pady=(0,0) if wide else (18,0))
-            body.columnconfigure(1,weight=0,minsize=320 if wide else 0)
-        body.bind('<Configure>',responsive,add='+');responsive()
+        def size_sidebar(event=None):
+            # Keep the two columns even on restored windows. Only its width adapts.
+            body.columnconfigure(1,weight=0,minsize=320 if body.winfo_width()>=1020 else 280)
+        body.bind('<Configure>',size_sidebar,add='+');size_sidebar()

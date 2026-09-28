@@ -90,3 +90,30 @@ def test_order_actions_visible_at_minimum_size(tmp_path,scaling):
             assert button.winfo_ismapped(),text
             assert button.winfo_rooty()+button.winfo_height()<=root.winfo_rooty()+650,text
     finally:root.destroy()
+
+@pytest.mark.parametrize('scaling',[1.0,1.5,2.0])
+def test_quick_actions_stay_right_when_window_size_changes(tmp_path,scaling):
+    root=tk.Tk()
+    try:
+        root.tk.call('tk','scaling',scaling)
+        app=App(root,Store(tmp_path/'db'),auto_start=False);app.show_main();root.update()
+        def descendants(widget):
+            for child in widget.winfo_children():
+                yield child
+                yield from descendants(child)
+        title=next(w for w in descendants(app.body) if isinstance(w,tk.Label) and w.cget('text')=='Ações rápidas')
+        right=title.master.master.master
+        def check():
+            root.update()
+            assert int(right.grid_info()['row'])==0
+            assert int(right.grid_info()['column'])==1
+            assert right.winfo_rootx()+right.winfo_width()<=root.winfo_rootx()+root.winfo_width()
+            assert title.winfo_ismapped()
+            card=app.dashboard_cards['active']
+            assert right.winfo_rootx()>card.winfo_rootx()+card.winfo_width()
+        check()
+        for size in ('920x650','1200x760','1000x700'):
+            root.state('normal');root.geometry(size);check()
+        if os.name=='nt':root.state('zoomed');check()
+        root.iconify();root.update();root.deiconify();check()
+    finally:root.destroy()
