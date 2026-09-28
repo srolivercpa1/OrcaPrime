@@ -5,7 +5,9 @@ from datetime import date, datetime
 from pathlib import Path
 from .domain import calculate, money, number, STATUSES, line_total, decimal_text
 
-class Store:
+from .quote_workflow import QuoteWorkflow
+
+class Store(QuoteWorkflow):
     def __init__(self, path):
         self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:
@@ -79,6 +81,7 @@ class Store:
 
     def save_quote(self,data,id_=None,source_id=None):
         previous=self.get_quote(id_) if id_ else None
+        if previous and previous.get('service_status')=='ENTREGUE':raise ValueError('Atendimento entregue é somente leitura. Duplique para um novo atendimento.')
         source=self.get_quote(source_id) if source_id and not id_ else None
         cid=int(data['customer_id'])
         if previous and previous['customer_id']==cid:
@@ -104,8 +107,15 @@ class Store:
            'items':items,'subtotal_cents':sub,'discount_cents':disc,'discount':str(disc/100),'total_cents':total,
            'notes':str(data.get('notes',''))[:10000],'terms':str(data.get('terms',''))[:10000],
            'created_at':previous['created_at'] if previous else date.today().isoformat()}
+        q.update({key:str(data.get(key,(previous or source or {}).get(key,'')))[:10000] for key in ('equipment','serial','service_report')})
+        q.update({key:(previous or {}).get(key,default) for key,default in [('service_status','AGUARDANDO'),('service_history',[]),('delivered_at','')]})
         with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            if not db.execute('SELECT 1 FROM customers WHERE id=?',(cid,)).fetchone():raise ValueError('Cliente não encontrado. Selecione um cliente cadastrado.')
             if previous:
+                current=json.loads(db.execute('SELECT data FROM quotes WHERE id=?',(id_,)).fetchone()[0])
+                if current.get('service_status')=='ENTREGUE':raise ValueError('Atendimento entregue é somente leitura.')
+                for key,default in [('service_status','AGUARDANDO'),('service_history',[]),('delivered_at','')]:q[key]=current.get(key,default)
                 q['number']=previous['number']
                 db.execute('UPDATE quotes SET data=? WHERE id=?',(json.dumps(q,ensure_ascii=False),id_))
             else:
@@ -114,13 +124,18 @@ class Store:
                 db.execute('UPDATE quotes SET data=? WHERE id=?',(json.dumps(q,ensure_ascii=False),id_))
         return id_
 
-    def list_quotes(self,search=''):
-        return [q for q in self._list('quotes') if search.casefold() in (q['number']+' '+q['customer']['name']+' '+q['status']).casefold()]
+    def list_quotes(self,search='',delivered=None):
+        return [q for q in self._list('quotes') if (delivered is None or (q.get('service_status')=='ENTREGUE')==delivered) and search.casefold() in (q['number']+' '+q['customer']['name']+' '+q['status']+' '+q.get('equipment','')+' '+q.get('serial','')).casefold()]
 
     def set_status(self,id_,status):
         if status not in STATUSES: raise ValueError('Situação inválida.')
-        q=self.get_quote(id_); q.pop('id'); q['status']=status
-        self._save('quotes',q,id_)
+        with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row=db.execute('SELECT data FROM quotes WHERE id=?',(id_,)).fetchone()
+            if not row:raise ValueError('Orçamento não encontrado.')
+            q=json.loads(row[0])
+            if q.get('service_status')=='ENTREGUE':raise ValueError('Atendimento entregue é somente leitura.')
+            q['status']=status;db.execute('UPDATE quotes SET data=? WHERE id=?',(json.dumps(q,ensure_ascii=False),id_))
 
     def backup(self,destination):
         if Path(destination).resolve()==self.path.resolve(): raise ValueError('Escolha outro arquivo para o backup.')

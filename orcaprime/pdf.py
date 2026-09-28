@@ -6,7 +6,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from .domain import brl
 
-def export_quote(path,quote,company):
+def export_quote(path,quote,company,report=False):
     styles=getSampleStyleSheet()
     styles.add(ParagraphStyle(name='SmallPrime',fontName='Helvetica',fontSize=9,leading=13,textColor=colors.HexColor('#334155')))
     def p(text,style='SmallPrime'): return Paragraph(escape(str(text)).replace('\n','<br/>'),styles[style])
@@ -22,6 +22,10 @@ def export_quote(path,quote,company):
     story.extend([table,Spacer(1,15),p('Subtotal: '+brl(quote['subtotal_cents'])),p('Desconto: '+brl(quote['discount_cents'])),p('TOTAL: '+brl(quote['total_cents']),'Heading2')])
     for title,key in [('Condições de pagamento','terms'),('Observações','notes')]:
         if quote.get(key): story.extend([p(title,'Heading3'),p(quote[key])])
+    if report:
+        from .quote_workflow import report_text
+        story.extend([Spacer(1,20),p('Relatório completo do atendimento','Heading2')])
+        story.extend(p(line) for line in report_text(quote).splitlines())
     story.extend([Spacer(1,30),p('Aprovação do cliente: ___________________________________'),p('Orçamento comercial. Não é documento fiscal.')])
     def footer(canvas,doc):
         canvas.saveState();canvas.setFont('Helvetica',8);canvas.setFillColor(colors.HexColor('#64748b'))

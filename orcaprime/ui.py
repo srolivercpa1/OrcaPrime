@@ -246,6 +246,18 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
                 record['id']=cid;refresh();return cid
             next_step=('Salvar e registrar aparelho/fotos',lambda cid:self.edit_order(customer_id=cid)) if not catalog and self.actor['role'] in ('ADMIN','ATENDIMENTO') else None
             Form(self.root,('Novo ' if new else 'Editar ')+('item' if catalog else 'cliente'),fields,values,save,self.guard,after_save_action=next_step)
+        def delete_customer():
+            self.guard()
+            if self.actor['role']!='ADMIN':raise ValueError('Somente o administrador pode excluir clientes.')
+            selection=tree.selection()
+            if not selection:raise ValueError('Selecione um cliente para excluir.')
+            customer=next(d for d in data if str(d['id'])==selection[0])
+            if messagebox.askyesno('Excluir cliente',f"Excluir o cadastro de {customer['name']}? A ação é permanente. Clientes com histórico serão preservados.",parent=self.root):
+                self.guard()
+                if self.actor['role']!='ADMIN':raise ValueError('Somente o administrador pode excluir clientes.')
+                self.store.delete_customer(customer['id']);refresh()
+        if not catalog and self.actor['role']=='ADMIN':
+            ttk.Button(bar,text='Excluir cliente',command=self.safe(delete_customer)).pack(side='right',padx=4)
         self.edit_record=edit
         ttk.Button(bar,text='Editar selecionado',command=self.safe(edit)).pack(side='right',padx=8)
         ttk.Button(bar,text='+ Novo',style='Primary.TButton',command=self.safe(lambda:edit(True))).pack(side='right')
@@ -254,34 +266,17 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         if not self.store.list_customers(): messagebox.showinfo('Primeiro cliente','Cadastre um cliente antes de criar o orçamento.');self.navigate('customers');return
         QuoteEditor(self.root,self.store,self.guard,lambda:self.navigate('quotes'),quote,duplicate)
     def page_quotes(self):
-        heading(self.body,'Orçamentos','Crie, acompanhe e exporte suas propostas em PDF.')
-        bar=ttk.Frame(self.body);bar.pack(fill='x');search=tk.StringVar();ttk.Entry(bar,textvariable=search,width=38).pack(side='left')
-        ttk.Label(bar,text='Busca por número, cliente ou situação',style='Sub.TLabel').pack(side='left',padx=10)
-        ttk.Button(bar,text='+ Novo',style='Primary.TButton',command=self.safe(self.new_quote)).pack(side='right')
-        tree=table(self.body,[('n','Número',125),('c','Cliente',250),('v','Validade',110),('s','Situação',120),('t','Total',130)])
-        def refresh(*_):
-            tree.delete(*tree.get_children())
-            for q in self.store.list_quotes(search.get()): tree.insert('','end',iid=str(q['id']),values=(q['number'],q['customer']['name'],'/'.join(q['valid_until'].split('-')[::-1]),q['status'],brl(q['total_cents'])))
-        def selected():
-            sel=tree.selection()
-            if not sel:raise ValueError('Selecione um orçamento.')
-            return self.store.get_quote(int(sel[0]))
-        def pdf():
-            q=selected();path=filedialog.asksaveasfilename(parent=self.root,defaultextension='.pdf',initialfile='Orcamento-'+q['number']+'.pdf',filetypes=[('PDF','*.pdf')])
-            if path:export_quote(path,q,self.store.company());messagebox.showinfo('PDF gerado','Orçamento salvo em:\n'+path)
-        buttons=ttk.Frame(self.body);buttons.pack(fill='x')
-        for label,action in [('Editar',lambda:self.new_quote(selected())),('Duplicar',lambda:self.new_quote(selected(),True)),('Exportar PDF',pdf)]: ttk.Button(buttons,text=label,command=self.safe(action)).pack(side='left',padx=(0,8))
-        status=tk.StringVar(value='ENVIADO');ttk.Combobox(buttons,textvariable=status,values=STATUSES,state='readonly',width=12).pack(side='left',padx=8)
-        def change():self.store.set_status(selected()['id'],status.get());refresh()
-        ttk.Button(buttons,text='Alterar situação',command=self.safe(change)).pack(side='left')
-        search.trace_add('write',refresh);tree.bind('<Double-1>',lambda e:self.safe(lambda:self.new_quote(selected()))());refresh()
+        from .quote_ui import show_quotes
+        show_quotes(self)
     def page_company(self):
         heading(self.body,'Minha empresa','Esses dados aparecem no cabeçalho dos seus orçamentos em PDF.')
+        from .workshop_ui import scroll_frame
+        body=scroll_frame(self.body)
         values=self.store.company();fields={}
         for key,label in [('name','Nome / razão social *'),('document','CPF / CNPJ'),('phone','Telefone'),('email','E-mail'),('address','Endereço'),('terms','Condições de pagamento padrão')]:
-            ttk.Label(self.body,text=label).pack(anchor='w',pady=(7,2));v=tk.StringVar(value=values.get(key,''));fields[key]=v;ttk.Entry(self.body,textvariable=v).pack(fill='x')
+            ttk.Label(body,text=label).pack(anchor='w',pady=(7,2));v=tk.StringVar(value=values.get(key,''));fields[key]=v;ttk.Entry(body,textvariable=v).pack(fill='x')
         def save():self.store.save_company({k:v.get() for k,v in fields.items()});messagebox.showinfo('Empresa','Dados da empresa salvos.')
-        ttk.Button(self.body,text='Salvar dados',style='Primary.TButton',command=self.safe(save)).pack(anchor='e',pady=20)
+        ttk.Button(body,text='Salvar dados',style='Primary.TButton',command=self.safe(save)).pack(anchor='e',pady=20)
     def page_license(self):
         if self.license is None:
             heading(self.body,'Sobre o OrçaPrime','Software pago — Desenvolvido por Sketch Inc')

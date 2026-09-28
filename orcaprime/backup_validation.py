@@ -1,6 +1,6 @@
 """Validação completa do conteúdo antes de substituir um banco de trabalho."""
 import json
-from datetime import date
+from datetime import date, datetime
 from .domain import calculate, STATUSES, line_total, number
 
 
@@ -30,6 +30,21 @@ def validate_database(db):
     for id_,raw in db.execute('SELECT id,data FROM quotes'):
         q=json.loads(raw);strings(q,('number','created_at','valid_until','status','discount','notes','terms'))
         if q['number'] in numbers or not q['number'] or q['status'] not in STATUSES or q.get('customer_id') not in ids:raise ValueError()
+        from .quote_workflow import SERVICE_STATUSES
+        for key in ('equipment','serial','service_report'):
+            if key in q:strings(q,(key,))
+        status=q.get('service_status','AGUARDANDO')
+        if not isinstance(status,str) or status not in SERVICE_STATUSES:raise ValueError('Andamento inválido no backup.')
+        delivered=q.get('delivered_at','')
+        if not isinstance(delivered,str):raise ValueError('Data de entrega inválida.')
+        if delivered:datetime.fromisoformat(delivered)
+        if (status=='ENTREGUE')!=bool(delivered):raise ValueError('Entrega inconsistente no backup.')
+        history=q.get('service_history',[])
+        if not isinstance(history,list):raise ValueError('Histórico inválido.')
+        for event in history:
+            strings(event,('at','from','to','note','actor'))
+            datetime.fromisoformat(event['at'])
+            if event['from'] not in SERVICE_STATUSES or event['to'] not in SERVICE_STATUSES:raise ValueError('Histórico inválido.')
         numbers.add(q['number']);date.fromisoformat(q['created_at']);date.fromisoformat(q['valid_until'])
         strings(q.get('customer'),('name','document','phone','email','address'))
         if q['customer'].get('id')!=q['customer_id']:raise ValueError()
