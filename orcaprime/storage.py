@@ -41,9 +41,18 @@ class Store:
     def list_items(self): return self._list('catalog')
 
     def save_customer(self,data,id_=None):
-        clean={k:str(data.get(k,'')).strip()[:1000] for k in ('name','document','phone','email','address')}
-        if not clean['name']: raise ValueError('Informe o nome do cliente.')
-        return self._save('customers',clean,id_)
+        from .customer_fields import CUSTOMER_FIELDS
+        # Preserve optional details when an older caller submits only basic fields.
+        with self.connect() as db:
+            previous=db.execute('SELECT data FROM customers WHERE id=?',(id_,)).fetchone() if id_ is not None else None
+            if id_ is not None and not previous:raise ValueError('Registro não encontrado.')
+            values=dict(json.loads(previous[0]) if previous else {},**data)
+            clean={key:str(values.get(key,'')).strip()[:1000] for key,_,_ in CUSTOMER_FIELDS}
+            if not clean['name']:raise ValueError('Informe o nome do cliente.')
+            raw=json.dumps(clean,ensure_ascii=False)
+            if id_ is not None:
+                db.execute('UPDATE customers SET data=? WHERE id=?',(raw,id_));return id_
+            return db.execute('INSERT INTO customers(data) VALUES(?)',(raw,)).lastrowid
 
     def save_item(self,data,id_=None):
         clean={k:str(data.get(k,'')).strip()[:1000] for k in ('description','unit','kind')}

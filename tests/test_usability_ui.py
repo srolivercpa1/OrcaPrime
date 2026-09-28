@@ -103,3 +103,29 @@ def test_cannot_close_application_during_photo_import(tmp_path,monkeypatch):
         app.forget_login();assert not app.closed
         assert len(notices)==2
     finally:root.destroy()
+
+def test_customer_registration_continues_to_device_intake_with_photos(tmp_path,monkeypatch):
+    from PIL import Image
+    from orcaprime.ui import App
+    path=tmp_path/'entrada.png';Image.new('RGB',(640,480),'blue').save(path)
+    monkeypatch.setattr('tkinter.filedialog.askopenfilenames',lambda **kwargs:(str(path),))
+    root=tk.Tk();errors=[];root.report_callback_exception=lambda *args:errors.append(args)
+    try:
+        store=Store(tmp_path/'db');app=App(root,store,auto_start=False);app.show_main();app.navigate('customers')
+        app.edit_record(True);root.update()
+        form=next(w for w in root.winfo_children() if isinstance(w,Form))
+        form.vars['name'].set('Cliente com aparelho');form.vars['whatsapp'].set('64999999999');form.vars['city'].set('Rio Verde')
+        click(form,'Salvar e registrar aparelho/fotos');root.update()
+        win=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+        cid=store.list_customers()[0]['id']
+        assert win.order_fields['customer_id'].get().startswith(str(cid)+' — ')
+        win.order_fields['equipment'].set('Celular');win.order_fields['checklist'].set('Tela trincada no canto direito; sem carregador.')
+        click(win,'Adicionar fotos')
+        pump(root,lambda:any(getattr(w,'image',None) is not None for w in descendants(win)))
+        order=app.workshop.list_orders()[0]
+        assert order['customer_id']==cid
+        assert order['customer']['whatsapp']=='64999999999'
+        assert order['checklist']=='Tela trincada no canto direito; sem carregador.'
+        assert order['attachments'][0]['filename']=='entrada.jpg'
+        assert not errors
+    finally:root.destroy()

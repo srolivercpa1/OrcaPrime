@@ -122,10 +122,13 @@ class WorkshopPages:
         for var in (search,status,technician,urgency,deadline,returns,active,view):var.trace_add('write',lambda *_:self.safe(refresh)())
         refresh()
 
-    def edit_order(self,order_id=None):
+    def edit_order(self,order_id=None,customer_id=None):
         from .workshop import STATUSES
         customers=self.store.list_customers()
         order=self.workshop.get_order(order_id) if order_id else {}
+        if customer_id is not None and not order_id:
+            if not any(c['id']==customer_id for c in customers):raise ValueError('Cliente não encontrado.')
+            order['customer_id']=customer_id
         win=tk.Toplevel(self.root);win.title('Ordem de serviço '+str(order.get('number','Nova')));fit_window(win,990,740);win.transient(self.root)
         bottom=ttk.Frame(win,padding=12);bottom.pack(side='bottom',fill='x')
         summary=ttk.Label(win,padding=12);summary.pack(fill='x')
@@ -134,7 +137,7 @@ class WorkshopPages:
         for name in ('Entrada','Diagnóstico e entrega','Itens','Pagamentos','Histórico e anexos','Documentos'):
             tab=ttk.Frame(notebook);notebook.add(tab,text=name);tabs[name]=tab
         variables={};customers_map={str(c['id'])+' — '+c['name']:c['id'] for c in customers}
-        fields=[('customer_id','Cliente *',tuple(customers_map)),('equipment','Equipamento *',None),('brand','Marca',None),('model','Modelo',None),('serial','Número de série / IMEI',None),('accessories','Acessórios recebidos',None),('complaint','Defeito relatado *',None),('checklist','Estado de conservação / checklist de entrada',None)]
+        fields=[('customer_id','Cliente *',tuple(customers_map)),('equipment','Equipamento *',None),('brand','Marca',None),('model','Modelo',None),('serial','Número de série / IMEI',None),('accessories','Acessórios recebidos',None),('complaint','Defeito relatado *',None),('checklist','Como o aparelho chegou / estado de conservação',None)]
         diagnostic=[('diagnosis','Diagnóstico técnico',None),('technician','Técnico responsável',None),('priority','Prioridade',('BAIXA','NORMAL','ALTA','URGENTE')),('due_date','Previsão (AAAA-MM-DD)',None),('warranty_days','Garantia (dias)',None),('warranty_terms','Condições da garantia',None),('receiver','Recebedor na entrega',None),('final_checklist','Checklist final / testes',None),('notes','Serviços executados / observações públicas (impressas)',None),('internal_notes','Observações internas (não impressas)',None)]
         from .widgets import TextValue
         from .order_templates import append_checklist
@@ -169,8 +172,10 @@ class WorkshopPages:
                 label=str(cid)+' — '+data['name'].strip()
                 customers_map[label]=cid;customer_box.configure(values=tuple(customers_map))
                 variables['customer_id'].set(label)
-            Form(win,'Novo cliente',[('name','Nome *',None),('document','CPF / CNPJ',None),('phone','Telefone',None),('email','E-mail',None),('address','Endereço',None)],{},created,customer_guard)
+            from .customer_fields import CUSTOMER_FIELDS
+            Form(win,'Novo cliente',CUSTOMER_FIELDS,{'person_type':'Pessoa física'},created,customer_guard)
         ttk.Button(customer_body,text='+ Novo cliente',state='disabled' if getattr(self,'actor',{}).get('role')=='TECNICO' else 'normal',command=self.safe(new_customer)).pack(after=customer_box,anchor='w',pady=6)
+        ttk.Label(customer_body,text='Registre abaixo os acessórios, o defeito e como o aparelho chegou. Use Adicionar fotos no rodapé para fotografias da entrada.',wraplength=540).pack(after=customer_box,anchor='w',pady=6)
         win.order_fields=variables
         initial={k:v.get() for k,v in variables.items()}
         itemtree=table(tabs['Itens'],[('d','Descrição',260),('q','Quantidade',100),('p','Preço',100),('t','Total',100)])

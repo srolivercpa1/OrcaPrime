@@ -239,10 +239,13 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
                 fields=[('description','Descrição *',None),('kind','Tipo',('PRODUTO','SERVIÇO')),('unit','Unidade',None),('price','Preço (R$) *',None)]
                 values=dict(record,price=decimal_text(record.get('price_cents',0)),kind=record.get('kind',default_kind),unit=record.get('unit','un'))
             else:
-                fields=[('name','Nome *',None),('document','CPF / CNPJ',None),('phone','Telefone',None),('email','E-mail',None),('address','Endereço',None)];values=record
+                from .customer_fields import CUSTOMER_FIELDS
+                fields=CUSTOMER_FIELDS;values=dict(record,person_type=record.get('person_type') or 'Pessoa física')
             def save(d):
-                (self.store.save_item if catalog else self.store.save_customer)(d,record.get('id'));refresh()
-            Form(self.root,('Novo ' if new else 'Editar ')+('item' if catalog else 'cliente'),fields,values,save,self.guard)
+                cid=(self.store.save_item if catalog else self.store.save_customer)(d,record.get('id'))
+                record['id']=cid;refresh();return cid
+            next_step=('Salvar e registrar aparelho/fotos',lambda cid:self.edit_order(customer_id=cid)) if not catalog and self.actor['role'] in ('ADMIN','ATENDIMENTO') else None
+            Form(self.root,('Novo ' if new else 'Editar ')+('item' if catalog else 'cliente'),fields,values,save,self.guard,after_save_action=next_step)
         self.edit_record=edit
         ttk.Button(bar,text='Editar selecionado',command=self.safe(edit)).pack(side='right',padx=8)
         ttk.Button(bar,text='+ Novo',style='Primary.TButton',command=self.safe(lambda:edit(True))).pack(side='right')

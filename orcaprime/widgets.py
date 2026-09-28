@@ -111,7 +111,7 @@ def table(parent,columns):
     return tree
 
 class Form(tk.Toplevel):
-    def __init__(self,parent,title,fields,data,on_save,guard):
+    def __init__(self,parent,title,fields,data,on_save,guard,after_save_action=None):
         super().__init__(parent);self.title(title);self.transient(parent);self.configure(bg=BG)
         from .windowing import fit_window
         from .workshop_ui import scroll_frame
@@ -123,9 +123,15 @@ class Form(tk.Toplevel):
             var=tk.StringVar(value=data.get(key,''));self.vars[key]=var
             widget=ttk.Combobox(body,textvariable=var,values=options,state='readonly') if options else ttk.Entry(body,textvariable=var)
             widget.pack(fill='x')
-        def save():
-            try: guard();on_save({k:v.get() for k,v in self.vars.items()});self.destroy()
-            except (ValueError,OSError) as e: messagebox.showerror('Confira os dados',str(e),parent=self)
+        def save(next_step=False):
+            try:
+                guard();result=on_save({k:v.get() for k,v in self.vars.items()})
+                if next_step and after_save_action:after_save_action[1](result)
+                self.destroy()
+            except (ValueError,OSError) as e:messagebox.showerror('Confira os dados',str(e),parent=self)
+        if after_save_action:
+            ttk.Button(footer,text=after_save_action[0],command=lambda:save(True)).pack(side='top',fill='x',pady=(0,8))
+
         ttk.Button(footer,text='Cancelar',command=self.destroy).pack(side='left')
         ttk.Button(footer,text='Salvar',style='Primary.TButton',command=save).pack(side='right')
         self.bind('<Escape>',lambda e:self.destroy());self.grab_set();self.focus_set()
