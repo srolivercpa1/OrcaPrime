@@ -9,7 +9,9 @@ def bind_mousewheel(canvas):
     def wheel(event):
         widget = event.widget
         # These widgets already handle the wheel through their class bindings.
-        if widget.winfo_class() in ('Text', 'Listbox', 'Treeview', 'TCombobox', 'Spinbox', 'TSpinbox'):
+        if widget.winfo_class()=='Text' and widget.yview()!=(0.0,1.0):
+            return
+        if widget.winfo_class() in ('Listbox', 'Treeview', 'TCombobox', 'Spinbox', 'TSpinbox'):
             return
         while widget is not None:
             if getattr(widget, '_wheel_viewport', False):

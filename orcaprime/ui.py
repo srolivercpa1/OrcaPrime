@@ -25,7 +25,9 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         self.workshop=Workshop(store,self.actor)
         self.root=root;self.store=store;self.license=license_client;self.events=queue.Queue();self.main_visible=False
         self.closed=False;self.generation=0;self.suspended=[];self.hidden_dialogs=[];self.activation_host=None;root.title('OrçaPrime | Gestão Profissional de Assistência')
-        root.geometry(f'{min(1600,root.winfo_screenwidth()-60)}x{min(940,root.winfo_screenheight()-80)}');root.minsize(920,650);styles(root);apply_icon(root)
+        root.geometry(f'{min(1600,root.winfo_screenwidth()-60)}x{min(940,root.winfo_screenheight()-80)}');root.minsize(min(920,root.winfo_screenwidth()-60),min(650,root.winfo_screenheight()-110));styles(root);apply_icon(root)
+        from .windowing import maximize
+        maximize(root)
         root.protocol('WM_DELETE_WINDOW',self.close);root.bind('<Destroy>',self._on_destroy,add='+');root.after(100,self.poll)
         if auto_start: self.show_activation()
     def _on_destroy(self,event):
@@ -34,11 +36,17 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         try:
             for timer in self.root.tk.call('after','info'):self.root.after_cancel(timer)
         except tk.TclError:pass
+    def import_in_progress(self):
+        return any(getattr(w,'_busy_import',False) for w in self.root.winfo_children())
     def close(self):
+        if self.import_in_progress():
+            messagebox.showinfo('Fotos em andamento','Aguarde a conclusão das fotos antes de sair.',parent=self.root);return
         if any(isinstance(w,tk.Toplevel) for w in self.root.winfo_children()):
             if not messagebox.askyesno('Fechar OrçaPrime','Há uma edição aberta. Encerrar e descartar as alterações não salvas?',parent=self.root):return
         self.closed=True;self.root.destroy()
     def forget_login(self):
+        if self.import_in_progress():
+            messagebox.showinfo('Fotos em andamento','Aguarde a conclusão das fotos antes de sair.',parent=self.root);return
         if messagebox.askyesno('Sair','Esquecer os dados de login salvos e fechar o programa? Salve suas alterações antes de continuar.',parent=self.root):
             RememberedLogin(self.store.path.parent).clear()
             self.closed=True;self.root.destroy()
@@ -215,9 +223,11 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         bar=ttk.Frame(self.body);bar.pack(fill='x');search=tk.StringVar();ttk.Entry(bar,textvariable=search,width=35).pack(side='left')
         cols=[('name','Descrição' if catalog else 'Nome',260),('one','Tipo' if catalog else 'Documento',150),('two','Unidade' if catalog else 'Telefone',130),('three','Preço' if catalog else 'E-mail',180)]
         tree=table(self.body,cols);data=[]
-        def refresh(*_):
+        def refresh(reload=True):
             nonlocal data
-            data=self.store.list_items() if catalog else self.store.list_customers();tree.delete(*tree.get_children())
+            if reload:data=self.store.list_items() if catalog else self.store.list_customers()
+            if not tree.winfo_exists():return
+            tree.delete(*tree.get_children())
             for d in data:
                 if search.get().casefold() not in str(d).casefold():continue
                 vals=(d['description'],d['kind'],d['unit'],brl(d['price_cents'])) if catalog else (d['name'],d['document'],d['phone'],d['email'])
@@ -236,7 +246,7 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         self.edit_record=edit
         ttk.Button(bar,text='Editar selecionado',command=self.safe(edit)).pack(side='right',padx=8)
         ttk.Button(bar,text='+ Novo',style='Primary.TButton',command=self.safe(lambda:edit(True))).pack(side='right')
-        tree.bind('<Double-1>',lambda e:self.safe(edit)());search.trace_add('write',refresh);refresh()
+        tree.bind('<Double-1>',lambda e:self.safe(edit)());search.trace_add('write',lambda *_:refresh(False));refresh()
     def new_quote(self,quote=None,duplicate=False):
         if not self.store.list_customers(): messagebox.showinfo('Primeiro cliente','Cadastre um cliente antes de criar o orçamento.');self.navigate('customers');return
         QuoteEditor(self.root,self.store,self.guard,lambda:self.navigate('quotes'),quote,duplicate)

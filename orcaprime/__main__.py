@@ -26,10 +26,6 @@ def main():
     try:root.iconbitmap(str(base/'assets'/'orcaprime-commercial.ico'))
     except tk.TclError:pass
     store=Store(data/'orcaprime.db')
-    try:
-        backup=run_daily_backup(store)
-        if backup.cloud_error:messagebox.showwarning('Backup automático','Backup local salvo. Não foi possível copiar para a segunda pasta: '+backup.cloud_error,parent=root)
-    except (OSError,ValueError) as error: messagebox.showwarning('Backup automático','Não foi possível criar a cópia automática. Confira o espaço e as permissões da pasta de dados.',parent=root)
     styles(root);root.withdraw()
     try:license_client=configured_client(base,data)
     except ValueError as error:
@@ -39,6 +35,10 @@ def main():
         root.destroy();return
     root.deiconify()
     app=App(root,store,license_client=license_client,actor=actor)
+    def backup_done(result,error):
+        if error:messagebox.showwarning('Backup automático','Não foi possível criar a cópia automática. Confira o espaço e as permissões da pasta de dados.',parent=root)
+        elif result.cloud_error:messagebox.showwarning('Backup automático','Backup local salvo. Não foi possível copiar para a segunda pasta: '+result.cloud_error,parent=root)
+    app.async_call(lambda:run_daily_backup(store),backup_done)
     root.mainloop()
 
 if __name__=='__main__':sys.exit(main() or 0)

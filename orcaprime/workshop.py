@@ -322,10 +322,20 @@ class Workshop(FinanceExtras):
         self._allow('ATENDIMENTO','TECNICO'); p=Path(path)
         with p.open('rb') as f: content=f.read(10*1024*1024+1)
         if len(content)>10*1024*1024: raise ValueError('Anexo excede 10 MB.')
+        return self._store_attachment(order_id,p.name,content)
+
+    def _store_attachment(self,order_id,filename,content):
+        self._allow('ATENDIMENTO','TECNICO')
         with self.connect() as db:
             self._editable(self._order(db,order_id))
-            aid=db.execute('INSERT INTO ws_attachments(order_id,filename,content,created_at) VALUES(?,?,?,?)',(order_id,p.name,content,now())).lastrowid
-            self._event(db,order_id,'ANEXO',filename=p.name,attachment_id=aid); return aid
+            aid=db.execute('INSERT INTO ws_attachments(order_id,filename,content,created_at) VALUES(?,?,?,?)',(order_id,filename,content,now())).lastrowid
+            self._event(db,order_id,'ANEXO',filename=filename,attachment_id=aid);return aid
+
+    def add_photo(self,order_id,path):
+        from .photos import prepare_photo
+        self._allow('ATENDIMENTO','TECNICO')
+        filename,content=prepare_photo(path)
+        return self._store_attachment(order_id,filename,content)
     def attachment_bytes(self,id):
         self._allow('ATENDIMENTO','TECNICO','FINANCEIRO')
         with self.connect() as db:

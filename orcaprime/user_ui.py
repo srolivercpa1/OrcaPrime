@@ -108,13 +108,17 @@ class UserPages:
         ttk.Button(body,text='Selecionar PDF da nota',command=self.safe(select_pdf)).pack(anchor='w',pady=8)
         ttk.Label(body,text='Impressora').pack(anchor='w')
         combo=ttk.Combobox(body,textvariable=printer,state='readonly');combo.pack(fill='x',pady=6)
+        from .windowing import background
+        status=tk.StringVar();ttk.Label(body,textvariable=status,wraplength=720).pack(anchor='w')
         def refresh():
-            names=list_printers();combo.configure(values=names)
-            if printer.get() not in names:printer.set('')
-        ttk.Button(body,text='Atualizar impressoras',command=self.safe(refresh)).pack(anchor='w',pady=6)
-        try:refresh()
-        except (OSError,RuntimeError,ValueError) as error:
-            ttk.Label(body,text=str(error),wraplength=720).pack(anchor='w')
+            refresh_button.configure(state='disabled');status.set('Consultando impressoras…')
+            def ready(names,error):
+                refresh_button.configure(state='normal');combo.configure(values=names or [])
+                if printer.get() not in (names or []):printer.set('')
+                status.set(str(error) if error else 'Impressoras atualizadas.')
+            background(body,list_printers,ready)
+        refresh_button=ttk.Button(body,text='Atualizar impressoras',command=self.safe(refresh));refresh_button.pack(anchor='w',pady=6)
+        refresh()
         def selected():
             if not path.get():raise ValueError('Selecione o PDF da nota primeiro.')
             return _pdf_path(path.get())

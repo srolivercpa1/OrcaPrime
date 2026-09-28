@@ -9,11 +9,12 @@ from tkinter import ttk, filedialog, messagebox
 from .widgets import heading, table
 from .domain import brl, decimal_text
 from .scrolling import bind_mousewheel
+from .windowing import fit_window, background
 
 
 def scroll_frame(parent):
     outer=ttk.Frame(parent);outer.pack(fill='both',expand=True)
-    canvas=tk.Canvas(outer,highlightthickness=0);bar=ttk.Scrollbar(outer,command=canvas.yview)
+    canvas=tk.Canvas(outer,highlightthickness=0,yscrollincrement=18);bar=ttk.Scrollbar(outer,command=canvas.yview)
     canvas.configure(yscrollcommand=bar.set);bar.pack(side='right',fill='y');canvas.pack(fill='both',expand=True)
     inner=ttk.Frame(canvas,padding=15);window=canvas.create_window((0,0),window=inner,anchor='nw')
     inner.bind('<Configure>',lambda e:canvas.configure(scrollregion=canvas.bbox('all')))
@@ -24,7 +25,7 @@ def scroll_frame(parent):
 
 class WorkshopPages:
     def _dialog(self,title,fields,values,save):
-        win=tk.Toplevel(self.root);win.title(title);win.geometry('570x590');win.transient(self.root)
+        win=tk.Toplevel(self.root);win.title(title);fit_window(win,570,590);win.transient(self.root)
         bottom=ttk.Frame(win,padding=12);bottom.pack(side='bottom',fill='x')
         body=scroll_frame(win);variables={}
         for key,label,options in fields:
@@ -124,9 +125,8 @@ class WorkshopPages:
     def edit_order(self,order_id=None):
         from .workshop import STATUSES
         customers=self.store.list_customers()
-        if not customers:raise ValueError('Cadastre um cliente antes de abrir a ordem de serviço.')
         order=self.workshop.get_order(order_id) if order_id else {}
-        win=tk.Toplevel(self.root);win.title('Ordem de serviço '+str(order.get('number','Nova')));win.geometry('990x740');win.minsize(750,560);win.transient(self.root)
+        win=tk.Toplevel(self.root);win.title('Ordem de serviço '+str(order.get('number','Nova')));fit_window(win,990,740);win.transient(self.root)
         bottom=ttk.Frame(win,padding=12);bottom.pack(side='bottom',fill='x')
         summary=ttk.Label(win,padding=12);summary.pack(fill='x')
         notebook=ttk.Notebook(win);notebook.pack(fill='both',expand=True,padx=12)
@@ -143,24 +143,41 @@ class WorkshopPages:
             for key,label,options in group:
                 ttk.Label(body,text=label).pack(anchor='w',pady=(8,3));value=order.get(key,'0' if key=='warranty_days' else '')
                 if key=='priority':value=value or 'NORMAL'
-                if key=='customer_id':value=next((k for k,v in customers_map.items() if v==order.get('customer_id')),next(iter(customers_map)))
+                if key=='customer_id':value=next((k for k,v in customers_map.items() if v==order.get('customer_id')),next(iter(customers_map),''))
                 if key in ('complaint','checklist','diagnosis','notes','final_checklist','warranty_terms','internal_notes'):
                     widget=tk.Text(body,height=4,wrap='word',font=(FONT,10),relief='solid',bd=1)
                     var=TextValue(widget);var.set(value);widget.pack(fill='x')
                 else:
                     var=tk.StringVar(value=value)
-                    (ttk.Combobox(body,textvariable=var,values=options,state='readonly') if options else ttk.Entry(body,textvariable=var)).pack(fill='x')
+                    widget=ttk.Combobox(body,textvariable=var,values=options or (),state='readonly') if options is not None else ttk.Entry(body,textvariable=var)
+                    widget.pack(fill='x')
+                    if key=='customer_id':customer_box=widget;customer_body=body
                 variables[key]=var
                 if key=='checklist':
                     category=tk.StringVar(value='celular');row=ttk.Frame(body);row.pack(fill='x',pady=5)
                     ttk.Combobox(row,textvariable=category,values=('celular','computador','outros'),state='readonly',width=14).pack(side='left')
                     ttk.Button(row,text='Inserir checklist',command=self.safe(lambda:variables['checklist'].set(append_checklist(variables['checklist'].get(),category.get())))).pack(side='left',padx=8)
+        def customer_guard():
+            self.guard()
+            if getattr(self,'actor',{}).get('role')=='TECNICO':raise ValueError('Seu perfil não permite cadastrar clientes.')
+        def new_customer():
+            customer_guard()
+            from .widgets import Form
+            def created(data):
+                customer_guard()
+                cid=self.store.save_customer(data)
+                label=str(cid)+' — '+data['name'].strip()
+                customers_map[label]=cid;customer_box.configure(values=tuple(customers_map))
+                variables['customer_id'].set(label)
+            Form(win,'Novo cliente',[('name','Nome *',None),('document','CPF / CNPJ',None),('phone','Telefone',None),('email','E-mail',None),('address','Endereço',None)],{},created,customer_guard)
+        ttk.Button(customer_body,text='+ Novo cliente',state='disabled' if getattr(self,'actor',{}).get('role')=='TECNICO' else 'normal',command=self.safe(new_customer)).pack(after=customer_box,anchor='w',pady=6)
         win.order_fields=variables
         initial={k:v.get() for k,v in variables.items()}
         itemtree=table(tabs['Itens'],[('d','Descrição',260),('q','Quantidade',100),('p','Preço',100),('t','Total',100)])
         paytree=table(tabs['Pagamentos'],[('d','Data',160),('m','Forma',120),('a','Valor',110),('s','Situação',130)])
-        history= tk.Text(tabs['Histórico e anexos'],height=8,wrap='word');history.pack(fill='both',expand=True,padx=8,pady=8)
-        attachments=ttk.Combobox(tabs['Histórico e anexos'],state='readonly');attachments.pack(fill='x',padx=8)
+        history_body=scroll_frame(tabs['Histórico e anexos'])
+        history=tk.Text(history_body,height=8,wrap='word');history.pack(fill='x',padx=8,pady=8)
+        attachments=ttk.Combobox(history_body,state='readonly');attachments.pack(fill='x',padx=8)
         def refresh():
             nonlocal order
             if order_id:order=self.workshop.get_order(order_id)
@@ -173,7 +190,9 @@ class WorkshopPages:
             attachments.configure(values=[f"{a['id']} — {a.get('filename',a.get('name','Anexo'))}" for a in order.get('attachments',[])])
         def save():
             nonlocal order_id,initial
-            data={k:v.get() for k,v in variables.items()};data['customer_id']=customers_map[data['customer_id']]
+            data={k:v.get() for k,v in variables.items()}
+            if data['customer_id'] not in customers_map:raise ValueError('Selecione ou cadastre um cliente para a OS.')
+            data['customer_id']=customers_map[data['customer_id']]
             
             if order_id and getattr(self,'actor',{}).get('role')=='FINANCEIRO':data={k:data[k] for k in ('receiver','final_checklist')}
             result=self.workshop.save_order(data,order_id);order_id=result['id'] if isinstance(result,dict) else result
@@ -193,7 +212,7 @@ class WorkshopPages:
             self._dialog('Adicionar item',[('part','Peça do estoque',tuple(mapping)),('description','Descrição *',None),('quantity','Quantidade *',None),('price','Preço unitário (R$) — vazio usa preço da peça',None),('cost','Custo unitário do serviço (R$)',None)],{'part':next(iter(mapping)),'quantity':'1','price':'','cost':'0,00'},submit)
         def removeitem():
             require_saved();self.workshop.remove_item(order_id,self._selected(itemtree));refresh()
-        bar=ttk.Frame(tabs['Itens']);bar.pack(fill='x',padx=8,pady=8)
+        bar=ttk.Frame(tabs['Itens']);bar.pack(side='bottom',fill='x',padx=8,pady=8,before=itemtree.master)
         for label,action in [('Adicionar peça / serviço',additem),('Remover item',removeitem)]:ttk.Button(bar,text=label,command=self.safe(action)).pack(side='left',padx=4)
         def payment():
             require_saved();request_id=str(uuid.uuid4())
@@ -203,7 +222,7 @@ class WorkshopPages:
             require_saved();pid=self._selected(paytree)
             def submit(d):self.workshop.reverse_payment(pid,d['note']);refresh()
             self._dialog('Estornar pagamento',[('note','Motivo obrigatório',None)],{},submit)
-        bar=ttk.Frame(tabs['Pagamentos']);bar.pack(fill='x',padx=8,pady=8)
+        bar=ttk.Frame(tabs['Pagamentos']);bar.pack(side='bottom',fill='x',padx=8,pady=8,before=paytree.master)
         for label,action in [('Receber pagamento',payment),('Estornar selecionado',reverse)]:ttk.Button(bar,text=label,command=self.safe(action)).pack(side='left',padx=4)
         def attach():
             require_saved();path=filedialog.askopenfilename(parent=win)
@@ -218,8 +237,59 @@ class WorkshopPages:
                 _,content=self.workshop.attachment_bytes(aid);Path(path).write_bytes(content)
                 if Path(path).suffix.lower()=='.pdf':open_document(path)
                 else:messagebox.showinfo('Anexo salvo','Arquivo salvo em: '+path,parent=win)
-        bar=ttk.Frame(tabs['Histórico e anexos']);bar.pack(fill='x',padx=8,pady=8)
+        bar=ttk.Frame(history_body);bar.pack(fill='x',padx=8,pady=8)
         ttk.Button(bar,text='Adicionar foto / anexo',command=self.safe(attach)).pack(side='left');ttk.Button(bar,text='Salvar anexo / abrir PDF',command=self.safe(openattach)).pack(side='left',padx=8)
+        photo_status=tk.StringVar(value='Fotos da OS: selecione várias imagens de uma vez.')
+        ttk.Label(history_body,textvariable=photo_status,wraplength=650).pack(anchor='w',padx=8,pady=6)
+        preview=ttk.Label(history_body);preview.pack(anchor='w',padx=8,pady=8)
+        def add_photos():
+            nonlocal order_id
+            paths=filedialog.askopenfilenames(parent=win,title='Adicionar fotos do equipamento',filetypes=[('Fotos','*.jpg *.jpeg *.png *.webp *.bmp')])
+            if not paths:return
+            if len(paths)>20:raise ValueError('Selecione até 20 fotos por vez.')
+            if not order_id:save()
+            self.guard();win._busy_import=True;photo_button.configure(state='disabled');photo_status.set('Preparando e salvando fotos…')
+            oid=order_id
+            def work():
+                added=[];errors=[]
+                for path in paths:
+                    try:added.append(self.workshop.add_photo(oid,path))
+                    except (OSError,ValueError) as error:errors.append(Path(path).name+': '+str(error))
+                return added,errors
+            def done(result,error):
+                win._busy_import=False;photo_button.configure(state='normal');refresh()
+                if error:photo_status.set(str(error));return
+                added,errors=result
+                photo_status.set(str(len(added))+' foto(s) adicionada(s).'+(' Falhas: '+'; '.join(errors) if errors else ''))
+                notebook.select(tabs['Histórico e anexos'])
+                if added:
+                    a=next(a for a in order['attachments'] if a['id']==added[-1])
+                    attachments.set(str(a['id'])+' — '+a['filename']);show_photo()
+            background(win,work,done)
+        preview_generation=0
+        def show_photo(event=None):
+            nonlocal preview_generation
+            preview_generation+=1;generation=preview_generation
+            preview.configure(image='',text='');preview.image=None
+            if not attachments.get():return
+            aid=int(attachments.get().split(' — ')[0])
+            def work():
+                import io
+                from PIL import Image,ImageOps
+                name,content=self.workshop.attachment_bytes(aid)
+                if Path(name).suffix.lower() not in ('.jpg','.jpeg','.png','.webp','.bmp'):return None
+                with Image.open(io.BytesIO(content)) as image:
+                    if image.width*image.height>25_000_000:raise ValueError('Imagem muito grande para pré-visualizar.')
+                    image.thumbnail((480,300));return ImageOps.exif_transpose(image).convert('RGB')
+            def done(image,error):
+                if generation!=preview_generation:return
+                if error:preview.configure(text='Não foi possível pré-visualizar esta imagem.');return
+                if image is not None:
+                    from PIL import ImageTk
+                    preview.image=ImageTk.PhotoImage(image,master=preview);preview.configure(image=preview.image)
+            background(win,work,done)
+        attachments.bind('<<ComboboxSelected>>',show_photo)
+        photo_button=ttk.Button(bottom,text='Adicionar fotos',command=self.safe(add_photos));photo_button.grid(row=0,column=4,padx=4,pady=4,sticky='ew')
         def open_documents():
             require_saved()
             if initial!={k:v.get() for k,v in variables.items()}:raise ValueError('Salve os dados da OS antes de gerar o documento.')
@@ -249,11 +319,17 @@ class WorkshopPages:
             tree=table(hist,[('n','OS',160),('e','Equipamento',180),('s','Situação',180)])
             for o in result['orders']:tree.insert('','end',iid=str(o['id']),values=(o['number'],o.get('equipment',''),o['status']))
             ttk.Button(hist,text='Abrir atendimento',command=self.safe(lambda:self.edit_order(self._selected(tree)))).pack(pady=8)
-        ttk.Button(tabs['Histórico e anexos'],text='Histórico do equipamento / cliente',command=self.safe(equipment_history)).pack(anchor='w',padx=8,pady=8)
+        ttk.Button(history_body,text='Histórico do equipamento / cliente',command=self.safe(equipment_history)).pack(anchor='w',padx=8,pady=8)
         def close():
+            if getattr(win,'_busy_import',False):
+                messagebox.showinfo('Fotos em andamento','Aguarde a conclusão das fotos antes de fechar esta OS.',parent=win);return
             if initial!={k:v.get() for k,v in variables.items()} and not messagebox.askyesno('Descartar alterações?','Fechar sem salvar as alterações?',parent=win):return
             win.destroy();self.navigate('orders')
-        for label,action in [('Salvar dados',save),('Alterar situação',transition),('Retorno em garantia',warranty),('Fechar',close)]:ttk.Button(bottom,text=label,command=self.safe(action)).pack(side='left',padx=4)
+        photo_button.grid_configure(row=1,column=0,columnspan=2)
+        for index,(label,action) in enumerate([('Salvar dados',save),('Alterar situação',transition),('Retorno em garantia',warranty),('Fechar',close)]):
+            ttk.Button(bottom,text=label,command=self.safe(action)).grid(row=index//2,column=index%2,padx=4,pady=4,sticky='ew')
+        photo_button.grid_configure(row=2)
+        bottom.columnconfigure((0,1),weight=1)
         win.protocol('WM_DELETE_WINDOW',close);refresh()
 
     def document_dialog(self, order_id, ensure_saved=None):
@@ -261,8 +337,8 @@ class WorkshopPages:
         from .service_documents import KINDS, PAPERS, list_printers, open_document
         order=self.workshop.get_order(order_id)
         actions=DocumentActions(self.workshop,self.store.company())
-        win=tk.Toplevel(self.root);win.title('Central de impressão | '+order['number']);win.geometry('600x550');win.transient(self.root)
-        body=ttk.Frame(win,padding=24);body.pack(fill='both',expand=True)
+        win=tk.Toplevel(self.root);win.title('Central de impressão | '+order['number']);fit_window(win,600,600);win.transient(self.root)
+        body=scroll_frame(win)
         heading(body,'Documentos da OS',order['number']+' | '+order.get('customer',{}).get('name',''))
         kind=tk.StringVar(value='OS');paper=tk.StringVar(value='A4');printer=tk.StringVar()
         settings=self._printer_settings()
@@ -272,11 +348,14 @@ class WorkshopPages:
         paper_box=ttk.Combobox(body,textvariable=paper,values=('A4','58mm','80mm'),state='readonly');paper_box.pack(fill='x',pady=(4,12))
         ttk.Label(body,text='Impressora instalada').pack(anchor='w')
         notice=tk.StringVar(value='Documentos administrativos | não são notas fiscais.')
-        try:names=list_printers()
-        except (ValueError,OSError,RuntimeError) as exc:names=[];notice.set(str(exc))
-        names=[n.get('name','') if isinstance(n,dict) else n for n in names]
-        ttk.Combobox(body,textvariable=printer,values=['']+names,state='readonly').pack(fill='x',pady=(4,12))
-        def defaults(*_):printer.set(settings.get(paper.get(),'') if settings.get(paper.get(),'') in names else '')
+        names=None
+        printer_box=ttk.Combobox(body,textvariable=printer,values=[''],state='readonly');printer_box.pack(fill='x',pady=(4,12))
+        def defaults(*_):printer.set(settings.get(paper.get(),'') if names is None or settings.get(paper.get(),'') in names else '')
+        def printers_ready(result,error):
+            nonlocal names
+            names=result or [];printer_box.configure(values=['']+names);defaults()
+            if error:notice.set(str(error))
+        background(win,list_printers,printers_ready)
         def changed_kind(*_):
             paper_box.configure(values=('ETIQUETA',) if kind.get()=='ETIQUETA' else ('A4','58mm','80mm'))
             if kind.get()=='ETIQUETA':paper.set('ETIQUETA')
@@ -389,13 +468,15 @@ class WorkshopPages:
         from .service_documents import list_printers
         heading(self.body,'Impressoras e documentos','Associe cada formato a uma impressora instalada no sistema.')
         body=scroll_frame(self.body);settings=self._printer_settings();variables={}
-        try:printers=list_printers()
-        except (OSError,RuntimeError,ValueError) as exc:
-            printers=[];ttk.Label(body,text='Não foi possível listar impressoras: '+str(exc),wraplength=600).pack(anchor='w')
-        names=[p.get('name','') if isinstance(p,dict) else str(p) for p in printers]
+        boxes=[];notice=tk.StringVar(value='Consultando impressoras…')
+        ttk.Label(body,textvariable=notice,wraplength=600).pack(anchor='w')
         for paper in ('A4','80mm','58mm','ETIQUETA'):
             ttk.Label(body,text=paper).pack(anchor='w',pady=(15,5));var=tk.StringVar(value=settings.get(paper,''));variables[paper]=var
-            ttk.Combobox(body,textvariable=var,values=['']+names,state='readonly').pack(fill='x')
+            box=ttk.Combobox(body,textvariable=var,values=['',var.get()],state='readonly');box.pack(fill='x');boxes.append(box)
+        def ready(names,error):
+            for box in boxes:box.configure(values=['']+(names or []))
+            notice.set(str(error) if error else 'Impressoras atualizadas.')
+        background(body,list_printers,ready)
         ttk.Label(body,text='Selecione uma impressora antes de imprimir. Instale impressoras e drivers pelo sistema operacional.',wraplength=600).pack(anchor='w',pady=18)
         def save():
             with self.store.connect() as db:db.execute('INSERT OR REPLACE INTO meta(key,value) VALUES(?,?)',('printer_settings',json.dumps({k:v.get() for k,v in variables.items()})))

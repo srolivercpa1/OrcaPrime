@@ -113,8 +113,11 @@ def table(parent,columns):
 class Form(tk.Toplevel):
     def __init__(self,parent,title,fields,data,on_save,guard):
         super().__init__(parent);self.title(title);self.transient(parent);self.configure(bg=BG)
-        self.resizable(True,True);self.minsize(460,350);self.vars={};self.guard=guard
-        body=ttk.Frame(self,padding=24);body.pack(fill='both',expand=True);heading(body,title)
+        from .windowing import fit_window
+        from .workshop_ui import scroll_frame
+        self.resizable(True,True);fit_window(self,600,640);self.vars={};self.guard=guard
+        footer=ttk.Frame(self,padding=12);footer.pack(side='bottom',fill='x')
+        body=scroll_frame(self);heading(body,title)
         for key,label,options in fields:
             ttk.Label(body,text=label).pack(anchor='w',pady=(8,3))
             var=tk.StringVar(value=data.get(key,''));self.vars[key]=var
@@ -123,7 +126,8 @@ class Form(tk.Toplevel):
         def save():
             try: guard();on_save({k:v.get() for k,v in self.vars.items()});self.destroy()
             except (ValueError,OSError) as e: messagebox.showerror('Confira os dados',str(e),parent=self)
-        ttk.Button(body,text='Salvar',style='Primary.TButton',command=save).pack(anchor='e',pady=(20,0))
+        ttk.Button(footer,text='Cancelar',command=self.destroy).pack(side='left')
+        ttk.Button(footer,text='Salvar',style='Primary.TButton',command=save).pack(side='right')
         self.bind('<Escape>',lambda e:self.destroy());self.grab_set();self.focus_set()
 
 
