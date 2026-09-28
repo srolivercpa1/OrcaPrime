@@ -79,7 +79,8 @@ def test_order_actions_visible_at_minimum_size(tmp_path,scaling):
     root=tk.Tk()
     try:
         root.tk.call('tk','scaling',scaling)
-        app=App(root,Store(tmp_path/'db'),auto_start=False);app.show_main();root.geometry('920x650');app.navigate('orders');root.update()
+        app=App(root,Store(tmp_path/'db'),auto_start=False);app.show_main();root.state('normal');root.geometry('920x650');app.navigate('orders');root.update()
+        assert root.winfo_width()==920 and root.winfo_height()==650
         def children(w):
             for c in w.winfo_children():
                 yield c
