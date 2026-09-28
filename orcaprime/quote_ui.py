@@ -23,7 +23,7 @@ def show_quotes(app):
     def is_delivered():return notebook.index(notebook.select())==1
     def current():return trees[is_delivered()]
     count=tk.StringVar(value='Nenhum atendimento marcado')
-    ttk.Label(footer,textvariable=count,style='Sub.TLabel').grid(row=0,column=0,columnspan=2,sticky='w',pady=(0,4))
+    ttk.Label(footer,textvariable=count,style='Sub.TLabel').grid(row=0,column=0,columnspan=4,sticky='w',pady=(0,4))
     def update_marks():
         tree=current()
         for row in tree.get_children():tree.set(row,'mark','☑' if int(row) in marked else '☐')
@@ -76,11 +76,11 @@ def show_quotes(app):
     edit_button=ttk.Button(footer,text='Editar',command=app.safe(lambda:app.new_quote(selected())))
     edit_button.grid(row=1,column=0,sticky='ew',padx=(0,4),pady=3)
     ttk.Button(footer,text='Duplicar',command=app.safe(lambda:app.new_quote(selected(),True))).grid(row=1,column=1,sticky='ew',padx=(4,0),pady=3)
-    ttk.Button(footer,text='Exportar PDF',command=app.safe(pdf)).grid(row=2,column=0,sticky='ew',padx=(0,4),pady=3)
-    ttk.Button(footer,text='Relatório completo',command=app.safe(report)).grid(row=2,column=1,sticky='ew',padx=(4,0),pady=3)
+    ttk.Button(footer,text='Exportar PDF',command=app.safe(pdf)).grid(row=1,column=2,sticky='ew',padx=(0,4),pady=3)
+    ttk.Button(footer,text='Relatório',command=app.safe(report)).grid(row=1,column=3,sticky='ew',padx=(4,0),pady=3)
     options={**{'Aparelho: '+label:('service',key) for key,label in SERVICE_STATUSES.items()},**{'Orçamento: '+status:('commercial',status) for status in STATUSES}}
     status=tk.StringVar(value='Aparelho: Em andamento')
-    status_box=ttk.Combobox(footer,textvariable=status,values=tuple(options),state='readonly',width=20);status_box.grid(row=3,column=0,sticky='ew',padx=(0,4),pady=3)
+    status_box=ttk.Combobox(footer,textvariable=status,values=tuple(options),state='readonly',width=20);status_box.grid(row=2,column=0,columnspan=2,sticky='ew',padx=(0,4),pady=3)
     def change():
         ids=sorted(marked)
         if not ids:raise ValueError('Marque a caixa ao lado dos atendimentos que deseja alterar.')
@@ -93,8 +93,8 @@ def show_quotes(app):
         else:
             for id_ in ids:app.store.set_status(id_,value)
         refresh()
-    change_button=ttk.Button(footer,text='Aplicar aos marcados',command=app.safe(change));change_button.grid(row=3,column=1,sticky='ew',padx=(4,0),pady=3)
-    footer.columnconfigure((0,1),weight=1)
+    change_button=ttk.Button(footer,text='Aplicar aos marcados',command=app.safe(change));change_button.grid(row=2,column=2,columnspan=2,sticky='ew',padx=(4,0),pady=3)
+    footer.columnconfigure((0,1,2,3),weight=1,uniform='actions')
     for tree in trees.values():
         tree.heading('mark',command=toggle_all);tree.bind('<Button-1>',toggle);tree.bind('<space>',keyboard_toggle)
         tree.bind('<Double-1>',lambda e:app.safe(report if is_delivered() else lambda:app.new_quote(selected()))())

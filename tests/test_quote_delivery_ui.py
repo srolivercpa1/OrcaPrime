@@ -19,12 +19,14 @@ def test_quote_actions_visible_and_delivery_archive(tmp_path,monkeypatch,scaling
         store=Store(tmp_path/'db');qid=create_quote(store)
         app=App(root,store,auto_start=False);app.show_main();app.navigate('quotes');root.update()
         root.state('normal');root.geometry('920x650');root.update()
-        for label in ['Editar','Duplicar','Exportar PDF','Relatório completo','Aplicar aos marcados']:
+        for label in ['Editar','Duplicar','Exportar PDF','Relatório','Aplicar aos marcados']:
             button=next(w for w in descendants(root) if isinstance(w,ttk.Button) and w.cget('text')==label)
             assert button.winfo_ismapped()
             assert button.winfo_height()>=button.winfo_reqheight()
             assert button.winfo_rooty()+button.winfo_height()<=root.winfo_rooty()+root.winfo_height()
-        tree=app.quote_trees[False];tree.focus(str(qid));tree.focus_force();root.update();tree.event_generate('<space>');root.update()
+        tree=app.quote_trees[False];root.update()
+        bounds=tree.bbox(str(qid),'mark');assert bounds, 'A primeira linha precisa estar visível'
+        x,y,w,h=bounds;tree.event_generate('<Button-1>',x=x+w//2,y=y+h//2);root.update()
         assert tree.set(str(qid),'mark')=='☑'
         box=next(w for w in descendants(root) if isinstance(w,ttk.Combobox) and 'Aparelho: Entregue' in w.cget('values'))
         box.set('Aparelho: Entregue');click(root,'Aplicar aos marcados');root.update()
