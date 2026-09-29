@@ -81,4 +81,4 @@ jobs:
             echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Tabelas alinhadas" --notes "Cabeçalhos e dados alinhados em todas as listagens. Linhas separadoras entre registros e seleção destacada para acompanhar cada atendimento. Mantém a versão visível 1.0; instalador revisão 1.0.8." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 release/OrcaPrime-Portable.zip release/OrcaPrime-Portable.zip.sha256
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Fluidez e exclusão de clientes" --notes "Redesenho das tabelas otimizado para reduzir travamentos no Windows. Permite excluir o cadastro de clientes com OS abertas ou finalizadas, preservando os atendimentos e dados históricos. Versão visível 1.0; instalador revisão 1.0.9." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 release/OrcaPrime-Portable.zip release/OrcaPrime-Portable.zip.sha256

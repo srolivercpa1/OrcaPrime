@@ -39,15 +39,17 @@ class Store(QuoteWorkflow):
                 return id_
             return db.execute(f'INSERT INTO {table}(data) VALUES(?)',(raw,)).lastrowid
 
-    def list_customers(self): return self._list('customers')
+    def list_customers(self): return [c for c in self._list('customers') if not c.get('deleted_at')]
     def list_items(self): return self._list('catalog')
 
     def save_customer(self,data,id_=None):
         from .customer_fields import CUSTOMER_FIELDS
-        # Preserve optional details when an older caller submits only basic fields.
+        # Serialize against deletion so a stale edit cannot restore a removed client.
         with self.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
             previous=db.execute('SELECT data FROM customers WHERE id=?',(id_,)).fetchone() if id_ is not None else None
             if id_ is not None and not previous:raise ValueError('Registro não encontrado.')
+            if previous and json.loads(previous[0]).get('deleted_at'):raise ValueError('Cliente excluído. Cadastre um novo cliente para novos atendimentos.')
             values=dict(json.loads(previous[0]) if previous else {},**data)
             clean={key:str(values.get(key,'')).strip()[:1000] for key,_,_ in CUSTOMER_FIELDS}
             if not clean['name']:raise ValueError('Informe o nome do cliente.')
@@ -111,7 +113,9 @@ class Store(QuoteWorkflow):
         q.update({key:(previous or {}).get(key,default) for key,default in [('service_status','AGUARDANDO'),('service_history',[]),('delivered_at','')]})
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            if not db.execute('SELECT 1 FROM customers WHERE id=?',(cid,)).fetchone():raise ValueError('Cliente não encontrado. Selecione um cliente cadastrado.')
+            customer_row=db.execute('SELECT data FROM customers WHERE id=?',(cid,)).fetchone()
+            if not customer_row:raise ValueError('Cliente não encontrado. Selecione um cliente cadastrado.')
+            if json.loads(customer_row[0]).get('deleted_at') and not (previous and previous['customer_id']==cid):raise ValueError('Cliente excluído. Selecione um cliente cadastrado para o novo atendimento.')
             if previous:
                 current=json.loads(db.execute('SELECT data FROM quotes WHERE id=?',(id_,)).fetchone()[0])
                 if current.get('service_status')=='ENTREGUE':raise ValueError('Atendimento entregue é somente leitura.')

@@ -69,8 +69,10 @@ def table_row_styles(root, style):
     if element not in style.element_names():
         pictures=[]
         for background in (INPUT,'#075fb6'):
-            picture=tk.PhotoImage(master=root,width=2,height=2)
-            picture.put(background,to=(0,0,2,1));picture.put('#294b70',to=(0,1,2,2))
+            # ttk tiles the middle of image elements; a 2px tile causes thousands
+            # of GDI copies per row on Windows. Use one wide reusable tile.
+            picture=tk.PhotoImage(master=root,width=2048,height=64)
+            picture.put(background,to=(0,0,2048,63));picture.put('#294b70',to=(0,63,2048,64))
             pictures.append(picture)
         root._table_row_art=pictures
         style.element_create(element,'image',pictures[0],('selected',pictures[1]),border=(0,0,0,1),sticky='nsew')

@@ -126,6 +126,8 @@ class WorkshopPages:
         from .workshop import STATUSES
         customers=self.store.list_customers()
         order=self.workshop.get_order(order_id) if order_id else {}
+        if order_id and not any(c['id']==order['customer_id'] for c in customers):
+            customers.append(dict(order['customer'],id=order['customer_id']))
         if customer_id is not None and not order_id:
             if not any(c['id']==customer_id for c in customers):raise ValueError('Cliente não encontrado.')
             order['customer_id']=customer_id

@@ -29,12 +29,12 @@ class QuoteWorkflow:
     def delete_customer(self,id_):
         with self.connect() as db:
             db.execute('PRAGMA foreign_keys=ON');db.execute('BEGIN IMMEDIATE')
-            if not db.execute('SELECT 1 FROM customers WHERE id=?',(id_,)).fetchone():raise ValueError('Cliente não encontrado.')
-            quoted=any(json.loads(raw).get('customer_id')==id_ for raw, in db.execute('SELECT data FROM quotes'))
-            has_orders=db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ws_orders'").fetchone()
-            ordered=has_orders and db.execute('SELECT 1 FROM ws_orders WHERE customer_id=? LIMIT 1',(id_,)).fetchone()
-            if quoted or ordered:raise ValueError('Este cliente possui histórico de OS ou orçamentos e não pode ser excluído.')
-            db.execute('DELETE FROM customers WHERE id=?',(id_,))
+            row=db.execute('SELECT data FROM customers WHERE id=?',(id_,)).fetchone()
+            if not row:raise ValueError('Cliente não encontrado.')
+            customer=json.loads(row[0])
+            customer['deleted_at']=datetime.now().astimezone().isoformat(timespec='seconds')
+            db.execute('UPDATE customers SET data=? WHERE id=?',(json.dumps(customer,ensure_ascii=False),id_))
+
 
 
 def report_text(q):

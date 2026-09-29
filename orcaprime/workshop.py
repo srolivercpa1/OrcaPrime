@@ -127,6 +127,7 @@ class Workshop(FinanceExtras):
         cid=int(data.get('customer_id',old['customer_id'] if old else 0))
         customer=db.execute('SELECT data FROM customers WHERE id=?',(cid,)).fetchone()
         if not customer: raise ValueError('Selecione um cliente cadastrado.')
+        if json.loads(customer[0]).get('deleted_at') and not ((old and old['customer_id']==cid) or parent):raise ValueError('Cliente excluído. Cadastre um cliente para novos atendimentos.')
         if old and old['approved_cents'] is not None:
             if cid!=old['customer_id']: raise ValueError('Cliente aprovado não pode ser substituído.')
             for field in ('warranty_days','warranty_terms','approval_note'):

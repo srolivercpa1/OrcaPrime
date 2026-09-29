@@ -53,3 +53,21 @@ def test_quote_editor_scroll_and_device_report_save(tmp_path):
         assert q['equipment']=='Notebook' and q['serial']=='ABC123'
         assert q['service_report']=='Placa reparada e testada'
     finally:root.destroy()
+
+def test_deleted_customer_existing_quote_and_order_remain_editable(tmp_path):
+    from orcaprime.ui import App
+    from orcaprime.workshop import Workshop
+    from orcaprime.quote_editor import QuoteEditor
+    root=tk.Tk()
+    try:
+        store=Store(tmp_path/'db');qid=create_quote(store);cid=store.get_quote(qid)['customer_id']
+        oid=Workshop(store).save_order({'customer_id':cid,'equipment':'Celular'})
+        store.delete_customer(cid);app=App(root,store,auto_start=False);app.show_main()
+        app.edit_order(oid);root.update()
+        win=next(w for w in root.winfo_children() if isinstance(w,tk.Toplevel))
+        assert win.order_fields['customer_id'].get().startswith(str(cid)+' — ')
+        win.destroy();app.new_quote(store.get_quote(qid));root.update()
+        editor=next(w for w in root.winfo_children() if isinstance(w,QuoteEditor))
+        assert editor.customer_choices[editor.customer.get()]==cid
+        editor.destroy()
+    finally:root.destroy()

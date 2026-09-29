@@ -22,6 +22,8 @@ def validate_database(db):
     for id_,raw in db.execute('SELECT id,data FROM customers'):
         customer=json.loads(raw);strings(customer,('name','document','phone','email','address'))
         if type(id_) is not int or id_<1 or not customer['name'].strip():raise ValueError()
+        if 'deleted_at' in customer:
+            strings(customer,('deleted_at',));datetime.fromisoformat(customer['deleted_at'])
         ids.add(id_)
     for id_,raw in db.execute('SELECT id,data FROM catalog'):
         item=json.loads(raw);strings(item,('description','unit','kind'))

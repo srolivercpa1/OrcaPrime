@@ -1,5 +1,5 @@
 #define MyAppName "OrçaPrime"
-#define MyAppVersion "1.0.8"
+#define MyAppVersion "1.0.9"
 #define MyAppPublisher "Sketch Inc"
 [Setup]
 AppId={{0478A6B2-BC65-4C86-A371-4FC7EC577067}

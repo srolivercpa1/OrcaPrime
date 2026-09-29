@@ -252,7 +252,7 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
             selection=tree.selection()
             if not selection:raise ValueError('Selecione um cliente para excluir.')
             customer=next(d for d in data if str(d['id'])==selection[0])
-            if messagebox.askyesno('Excluir cliente',f"Excluir o cadastro de {customer['name']}? A ação é permanente. Clientes com histórico serão preservados.",parent=self.root):
+            if messagebox.askyesno('Excluir cliente',f"Excluir o cadastro de {customer['name']}? O cadastro sairá da lista de clientes. As OS abertas ou finalizadas e os orçamentos continuarão disponíveis, com os dados do cliente preservados no histórico.",parent=self.root):
                 self.guard()
                 if self.actor['role']!='ADMIN':raise ValueError('Somente o administrador pode excluir clientes.')
                 self.store.delete_customer(customer['id']);refresh()
@@ -263,7 +263,7 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         ttk.Button(bar,text='+ Novo',style='Primary.TButton',command=self.safe(lambda:edit(True))).pack(side='right')
         tree.bind('<Double-1>',lambda e:self.safe(edit)());search.trace_add('write',lambda *_:refresh(False));refresh()
     def new_quote(self,quote=None,duplicate=False):
-        if not self.store.list_customers(): messagebox.showinfo('Primeiro cliente','Cadastre um cliente antes de criar o orçamento.');self.navigate('customers');return
+        if not self.store.list_customers() and not (quote and not duplicate): messagebox.showinfo('Primeiro cliente','Cadastre um cliente antes de criar o orçamento.');self.navigate('customers');return
         QuoteEditor(self.root,self.store,self.guard,lambda:self.navigate('quotes'),quote,duplicate)
     def page_quotes(self):
         from .quote_ui import show_quotes

@@ -1,6 +1,6 @@
 # Clientes e entregues — versão 1.0
 
-Em Clientes, o administrador pode selecionar um cadastro e usar **Excluir cliente**. A confirmação é obrigatória. Clientes vinculados a OS ou orçamentos não podem ser excluídos, para preservar o histórico.
+Em Clientes, o administrador pode selecionar um cadastro e usar **Excluir cliente**. A confirmação é obrigatória. Clientes podem ser excluídos mesmo com OS abertas ou finalizadas e orçamentos. A exclusão retira o cadastro das listas e de novos atendimentos; mantém uma referência interna para preservar OS, garantias, orçamentos e documentos. Os atendimentos existentes continuam acessíveis e editáveis conforme sua situação.
 
 Em Orçamentos, marque as caixas dos atendimentos e escolha o andamento do aparelho: Aguardando, Em andamento, Pronto ou Entregue. A situação comercial (rascunho, enviado, aprovado, recusado) continua independente. O controle acompanha cada orçamento; não sincroniza automaticamente com a página de OS.
 

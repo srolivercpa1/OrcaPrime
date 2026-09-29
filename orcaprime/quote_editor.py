@@ -12,6 +12,8 @@ class QuoteEditor(tk.Toplevel):
         self.quote=copy.deepcopy(quote or {});self.id=None if duplicate else self.quote.get('id')
         self.source_id=self.quote.get('id') if duplicate else None
         self.items=copy.deepcopy(self.quote.get('items',[]));self.customers=store.list_customers();self.catalog=store.list_items()
+        if self.id and not any(c['id']==self.quote['customer_id'] for c in self.customers):
+            self.customers.append(dict(self.quote['customer'],id=self.quote['customer_id']))
         self.protocol('WM_DELETE_WINDOW',self.close)
         from .windowing import fit_window
         from .workshop_ui import scroll_frame
