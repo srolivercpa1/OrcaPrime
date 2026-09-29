@@ -11,3 +11,6 @@ Ao confirmar Entregue, o registro sai de Em atendimento e aparece na aba Entregu
 O formulário permite informar aparelho, serial/IMEI e relato dos serviços. Relatório completo exibe os itens, dados do cliente, valores, condições, observações e mudanças de andamento; pode ser salvo em PDF. Esses dados também são preservados nos backups.
 
 O rodapé de Orçamentos reserva espaço para os botões. O editor possui rolagem e mantém Salvar e Cancelar visíveis.
+
+
+Para apagar um orçamento, selecione uma única linha em **Orçamentos → Em atendimento** ou **Entregues**, clique em **Excluir orçamento** (ao lado de Novo) e confirme. A opção é exclusiva do administrador. Os itens e o histórico daquele orçamento são apagados; clientes e OS independentes permanecem. PDFs já exportados e backups anteriores permanecem.

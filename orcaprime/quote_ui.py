@@ -47,6 +47,16 @@ def show_quotes(app):
         ids=marked or {int(row) for row in current().selection()}
         if len(ids)!=1:raise ValueError('Selecione somente um atendimento para esta ação.')
         return app.store.get_quote(next(iter(ids)))
+    def delete_quote():
+        app.guard()
+        if app.actor.get('role')!='ADMIN':raise ValueError('Somente o administrador pode excluir orçamentos.')
+        q=selected()
+        if not messagebox.askyesno('Excluir orçamento',f"Excluir o orçamento {q['number']} de {q['customer']['name']}?\n\nOs itens e o histórico deste orçamento serão apagados permanentemente. O cadastro do cliente e suas OS serão mantidos.",parent=app.root):return
+        app.guard()
+        if app.actor.get('role')!='ADMIN':raise ValueError('Somente o administrador pode excluir orçamentos.')
+        app.store.delete_quote(q['id']);refresh()
+    if app.actor.get('role')=='ADMIN':
+        ttk.Button(bar,text='Excluir orçamento',command=app.safe(delete_quote)).pack(side='right',padx=(8,0))
     def refresh(*_):
         marked.clear();tree=current();tree.delete(*tree.get_children())
         for q in app.store.list_quotes(search.get(),delivered=is_delivered()):

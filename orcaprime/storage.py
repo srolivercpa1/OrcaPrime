@@ -119,7 +119,9 @@ class Store(QuoteWorkflow,CompanyLogo):
             if not customer_row:raise ValueError('Cliente não encontrado. Selecione um cliente cadastrado.')
             if json.loads(customer_row[0]).get('deleted_at') and not (previous and previous['customer_id']==cid):raise ValueError('Cliente excluído. Selecione um cliente cadastrado para o novo atendimento.')
             if previous:
-                current=json.loads(db.execute('SELECT data FROM quotes WHERE id=?',(id_,)).fetchone()[0])
+                current_row=db.execute('SELECT data FROM quotes WHERE id=?',(id_,)).fetchone()
+                if not current_row:raise ValueError('Orçamento não encontrado. Ele pode ter sido excluído.')
+                current=json.loads(current_row[0])
                 if current.get('service_status')=='ENTREGUE':raise ValueError('Atendimento entregue é somente leitura.')
                 for key,default in [('service_status','AGUARDANDO'),('service_history',[]),('delivered_at','')]:q[key]=current.get(key,default)
                 q['number']=previous['number']

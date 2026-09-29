@@ -5,6 +5,11 @@ from datetime import datetime
 SERVICE_STATUSES={'AGUARDANDO':'Aguardando','EM_ANDAMENTO':'Em andamento','PRONTO':'Pronto','ENTREGUE':'Entregue'}
 
 class QuoteWorkflow:
+    def delete_quote(self,id_):
+        with self.connect() as db:
+            if db.execute('DELETE FROM quotes WHERE id=?',(id_,)).rowcount!=1:
+                raise ValueError('Orçamento não encontrado.')
+
     def set_service_status(self,ids,status,note='',actor=''):
         ids=list(dict.fromkeys(ids))
         if not ids or len(ids)>500 or status not in SERVICE_STATUSES:raise ValueError('Selecione os registros e uma situação válida.')
