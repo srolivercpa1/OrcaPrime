@@ -252,10 +252,11 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
             selection=tree.selection()
             if not selection:raise ValueError('Selecione um cliente para excluir.')
             customer=next(d for d in data if str(d['id'])==selection[0])
-            if messagebox.askyesno('Excluir cliente',f"Excluir o cadastro de {customer['name']}? O cadastro sairá da lista de clientes. As OS abertas ou finalizadas e os orçamentos continuarão disponíveis, com os dados do cliente preservados no histórico.",parent=self.root):
+            order_ids=self.store.customer_order_ids(customer['id'])
+            if messagebox.askyesno('Excluir cliente e OS',f"Excluir o cadastro de {customer['name']}? Serão apagadas {len(order_ids)} OS deste cliente, abertas ou finalizadas, incluindo itens, fotos e histórico das OS. Esta ação não pode ser desfeita pelo programa. Os lançamentos de caixa e estoque já realizados e os orçamentos serão preservados.",parent=self.root):
                 self.guard()
                 if self.actor['role']!='ADMIN':raise ValueError('Somente o administrador pode excluir clientes.')
-                self.store.delete_customer(customer['id']);refresh()
+                self.store.delete_customer(customer['id'],expected_orders=order_ids);refresh()
         if not catalog and self.actor['role']=='ADMIN':
             ttk.Button(bar,text='Excluir cliente',command=self.safe(delete_customer)).pack(side='right',padx=4)
         self.edit_record=edit
@@ -269,9 +270,11 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
         from .quote_ui import show_quotes
         show_quotes(self)
     def page_company(self):
-        heading(self.body,'Minha empresa','Esses dados aparecem no cabeçalho dos seus orçamentos em PDF.')
+        heading(self.body,'Minha empresa','Cadastre os dados e a logo para seus documentos de atendimento.')
         from .workshop_ui import scroll_frame
         body=scroll_frame(self.body)
+        from .company_ui import logo_controls
+        logo_controls(self,body)
         values=self.store.company();fields={}
         for key,label in [('name','Nome / razão social *'),('document','CPF / CNPJ'),('phone','Telefone'),('email','E-mail'),('address','Endereço'),('terms','Condições de pagamento padrão')]:
             ttk.Label(body,text=label).pack(anchor='w',pady=(7,2));v=tk.StringVar(value=values.get(key,''));fields[key]=v;ttk.Entry(body,textvariable=v).pack(fill='x')

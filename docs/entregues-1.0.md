@@ -1,6 +1,8 @@
 # Clientes e entregues — versão 1.0
 
-Em Clientes, o administrador pode selecionar um cadastro e usar **Excluir cliente**. A confirmação é obrigatória. Clientes podem ser excluídos mesmo com OS abertas ou finalizadas e orçamentos. A exclusão retira o cadastro das listas e de novos atendimentos; mantém uma referência interna para preservar OS, garantias, orçamentos e documentos. Os atendimentos existentes continuam acessíveis e editáveis conforme sua situação.
+Em Clientes, o administrador pode selecionar um cadastro e usar **Excluir cliente**. A confirmação mostra quantas OS serão apagadas. As OS desse cliente, abertas ou finalizadas, serão removidas com seus itens, fotos, pagamentos vinculados e histórico. A operação é atômica: em caso de erro, nada é apagado. Os lançamentos de caixa e movimentações de estoque já realizados ficam preservados, sem alterar seus saldos. Orçamentos são independentes e permanecem no histórico. PDFs já salvos fora do programa e backups anteriores não são apagados.
+
+Em **Minha empresa → Adicionar / trocar logo**, escolha uma imagem PNG, JPG ou WebP de até 10 MB. A logo é salva automaticamente dentro do banco, sem depender do arquivo original. Ela aparece nas próximas impressões e exportações de OS e garantia, inclusive nas OS antigas, em A4, 58 mm e 80 mm. A logo também fica no backup. **Remover logo** retira a imagem das próximas impressões. As etiquetas não recebem logo.
 
 Em Orçamentos, marque as caixas dos atendimentos e escolha o andamento do aparelho: Aguardando, Em andamento, Pronto ou Entregue. A situação comercial (rascunho, enviado, aprovado, recusado) continua independente. O controle acompanha cada orçamento; não sincroniza automaticamente com a página de OS.
 

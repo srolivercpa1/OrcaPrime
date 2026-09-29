@@ -7,7 +7,9 @@ from .domain import calculate, money, number, STATUSES, line_total, decimal_text
 
 from .quote_workflow import QuoteWorkflow
 
-class Store(QuoteWorkflow):
+from .company_logo import CompanyLogo
+
+class Store(QuoteWorkflow,CompanyLogo):
     def __init__(self, path):
         self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as db:

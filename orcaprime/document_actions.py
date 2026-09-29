@@ -11,8 +11,10 @@ class DocumentActions:
     def generate(self, order_id, destination, kind, paper):
         if not destination: return None
         order = self.workshop.get_order(order_id)
+        company=dict(order.get('company') or self.company)
+        company['logo_base64']=self.workshop.store.company_logo()
         return service_documents.export_service_document(
-            order, order.get('company') or self.company, Path(destination), kind, paper)
+            order, company, Path(destination), kind, paper)
 
     def send(self, path, printer):
         if not printer or not str(printer).strip():

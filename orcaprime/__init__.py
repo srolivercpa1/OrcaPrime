@@ -1,2 +1,2 @@
 __version__ = "1.0"
-__release_tag__ = "v1.0-fluidez"
+__release_tag__ = "v1.0-logo-os"

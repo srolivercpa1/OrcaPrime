@@ -3,19 +3,18 @@ from orcaprime.storage import Store
 from test_business import create_quote
 from orcaprime.workshop import Workshop
 
-def test_delete_customer_preserves_existing_orders_quotes_and_backup(tmp_path):
+def test_delete_customer_removes_orders_preserves_quotes_and_backup(tmp_path):
     s=Store(tmp_path/'db');qid=create_quote(s);cid=s.get_quote(qid)['customer_id']
     ws=Workshop(s);oid=ws.save_order({'customer_id':cid,'equipment':'Celular'})
     s.delete_customer(cid)
     assert s.list_customers()==[]
     assert s.get_quote(qid)['customer']['name']
-    assert ws.get_order(oid)['customer']['name']
-    ws.save_order({'customer_id':cid,'equipment':'Celular revisado'},oid)
+    with pytest.raises(ValueError):ws.get_order(oid)
     s.save_quote(s.get_quote(qid),qid)
     with pytest.raises(ValueError):ws.save_order({'customer_id':cid,'equipment':'Novo'})
     with pytest.raises(ValueError):s.save_customer({'name':'Reativado'},cid)
     s.backup(tmp_path/'copy.db');s.restore(tmp_path/'copy.db')
-    assert s.list_customers()==[] and ws.get_order(oid)['equipment']=='Celular revisado'
+    assert s.list_customers()==[] and ws.list_orders()==[]
 
 
 def test_delivery_moves_quote_and_preserves_report_and_history(tmp_path):
@@ -63,14 +62,13 @@ def test_invalid_workflow_backup_is_rejected(tmp_path,field,value):
         db.execute('UPDATE quotes SET data=? WHERE id=?',(json.dumps(q),qid))
     with s.connect() as db,pytest.raises(ValueError):validate_database(db)
 
-def test_deleted_customer_delivered_os_and_warranty_are_preserved(tmp_path):
+def test_deleted_customer_delivered_os_and_warranty_are_removed(tmp_path):
     s=Store(tmp_path/'db');cid=s.save_customer({'name':'Cliente da garantia'});w=Workshop(s)
     oid=w.save_order({'customer_id':cid,'equipment':'Notebook'})
     w.add_item(oid,{'description':'Serviço','kind':'SERVICO','quantity':'1','price':'0'})
     for status in ('DIAGNOSTICO','AGUARDANDO_APROVACAO','EM_REPARO','EM_TESTES','PRONTA'):
         w.transition(oid,status,'Aprovado pelo cliente')
     w.save_order({'receiver':'Cliente','final_checklist':'Testado'},oid);w.transition(oid,'ENTREGUE')
-    before=w.get_order(oid);s.delete_customer(cid)
-    assert w.get_order(oid)==before and not s.list_customers()
-    returned=w.create_return(oid,'Mesmo defeito')
-    assert w.get_order(returned)['customer']['name']=='Cliente da garantia'
+    returned=w.create_return(oid,'Mesmo defeito');s.delete_customer(cid)
+    assert not w.list_orders() and not s.list_customers()
+    with pytest.raises(ValueError):w.get_order(returned)

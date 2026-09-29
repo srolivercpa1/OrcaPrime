@@ -26,11 +26,27 @@ class QuoteWorkflow:
                 if status=='ENTREGUE':q['delivered_at']=at
                 db.execute('UPDATE quotes SET data=? WHERE id=?',(json.dumps(q,ensure_ascii=False),id_))
 
-    def delete_customer(self,id_):
+    def customer_order_ids(self,id_):
+        with self.connect() as db:
+            if not db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ws_orders'").fetchone():return ()
+            return tuple(row[0] for row in db.execute('SELECT id FROM ws_orders WHERE customer_id=? ORDER BY id',(id_,)))
+
+    def delete_customer(self,id_,expected_orders=None):
         with self.connect() as db:
             db.execute('PRAGMA foreign_keys=ON');db.execute('BEGIN IMMEDIATE')
             row=db.execute('SELECT data FROM customers WHERE id=?',(id_,)).fetchone()
             if not row:raise ValueError('Cliente não encontrado.')
+            has_orders=db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='ws_orders'").fetchone()
+            if has_orders:
+                ids=tuple(r[0] for r in db.execute('SELECT id FROM ws_orders WHERE customer_id=? ORDER BY id',(id_,)))
+                if expected_orders is not None and ids!=tuple(expected_orders):raise ValueError('As OS do cliente mudaram. Confira e confirme a exclusão novamente.')
+                # Keep real cash and inventory balances, removing only their links.
+                db.execute('UPDATE ws_cash SET payment_id=NULL WHERE payment_id IN (SELECT id FROM ws_payments WHERE order_id IN (SELECT id FROM ws_orders WHERE customer_id=?))',(id_,))
+                db.execute('UPDATE ws_movements SET order_id=NULL WHERE order_id IN (SELECT id FROM ws_orders WHERE customer_id=?)',(id_,))
+                for table in ('ws_attachments','ws_events','ws_items','ws_payments'):
+                    db.execute(f'DELETE FROM {table} WHERE order_id IN (SELECT id FROM ws_orders WHERE customer_id=?)',(id_,))
+                db.execute('UPDATE ws_orders SET parent_id=NULL WHERE parent_id IN (SELECT id FROM ws_orders WHERE customer_id=?)',(id_,))
+                db.execute('DELETE FROM ws_orders WHERE customer_id=?',(id_,))
             customer=json.loads(row[0])
             customer['deleted_at']=datetime.now().astimezone().isoformat(timespec='seconds')
             db.execute('UPDATE customers SET data=? WHERE id=?',(json.dumps(customer,ensure_ascii=False),id_))

@@ -96,6 +96,9 @@ def export_service_document(order, company, destination, kind='OS', paper='A4') 
                            leading=font_size * 1.4, spaceAfter=5, splitLongWords=True)
     heading = ParagraphStyle('ServiceHeading', parent=style, fontName='OrcaSans-Bold', spaceBefore=8)
     story = []
+    if company.get('logo_base64'):
+        from .company_logo import logo_flowable
+        story.extend([logo_flowable(company['logo_base64'],min(160,size[0]-margin*2),60),Spacer(1,8)])
 
     def paragraph(value, bold=False):
         story.append(Paragraph(escape(_text(value)).replace('\n', '<br/>'), heading if bold else style))

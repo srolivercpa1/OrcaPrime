@@ -18,6 +18,10 @@ def validate_database(db):
     if db.execute("SELECT value FROM meta WHERE key='schema'").fetchone()!=('1',):raise ValueError('Versão incompatível.')
     company=db.execute("SELECT value FROM meta WHERE key='company'").fetchone()
     if company:strings(json.loads(company[0]),('name','document','phone','email','address','terms'))
+    logo=db.execute("SELECT value FROM meta WHERE key='company_logo'").fetchone()
+    if logo:
+        from .company_logo import logo_bytes
+        logo_bytes(logo[0])
     ids=set()
     for id_,raw in db.execute('SELECT id,data FROM customers'):
         customer=json.loads(raw);strings(customer,('name','document','phone','email','address'))
