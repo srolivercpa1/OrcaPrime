@@ -221,7 +221,7 @@ class App(DashboardPages, WorkshopPages, UserPages, BackupPages):
     def records(self,catalog):
         title='Produtos e serviços' if catalog else 'Clientes';heading(self.body,title,'Cadastre e mantenha suas informações sempre à mão.')
         bar=ttk.Frame(self.body);bar.pack(fill='x');search=tk.StringVar();ttk.Entry(bar,textvariable=search,width=35).pack(side='left')
-        cols=[('name','Descrição' if catalog else 'Nome',260),('one','Tipo' if catalog else 'Documento',150),('two','Unidade' if catalog else 'Telefone',130),('three','Preço' if catalog else 'E-mail',180)]
+        cols=[('name','Descrição' if catalog else 'Nome do cliente',260),('one','Tipo' if catalog else 'Documento',150),('two','Unidade' if catalog else 'Telefone',130),('three','Preço' if catalog else 'E-mail',180)]
         tree=table(self.body,cols);data=[]
         def refresh(reload=True):
             nonlocal data

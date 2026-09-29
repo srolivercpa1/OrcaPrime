@@ -53,7 +53,28 @@ def styles(root):
     s.configure('Treeview.Heading',background='#0e2748',foreground=MUTED,font=(FONT,10,'bold'),padding=10,relief='flat')
     s.map('Treeview',background=[('selected','#075fb6')],foreground=[('selected','white')])
     s.map('Treeview.Heading',background=[('active','#173f6d')])
+    table_row_styles(root,s)
     rounded_button_styles(root,s)
+
+def table_row_styles(root, style):
+    """Paint row rules through ttk so scrolling and selection remain native."""
+    from tkinter import font
+    style.configure('Treeview',rowheight=max(38,font.Font(root,font=(FONT,10)).metrics('linespace')+14))
+    style.configure('Treeview.Heading',padding=(6,10),relief='ridge',borderwidth=1)
+    style.configure('Treeview',padding=0)
+    style.layout('Treeview.Cell',[('Treeitem.padding',{'sticky':'nswe','children':[('Treeitem.text',{'sticky':'nswe'})]})])
+    style.configure('Treeview.Cell',padding=(6,0))
+    # Images belong to the interpreter, not a page, and survive navigation.
+    element='OrcaPrime.table.row'
+    if element not in style.element_names():
+        pictures=[]
+        for background in (INPUT,'#075fb6'):
+            picture=tk.PhotoImage(master=root,width=2,height=2)
+            picture.put(background,to=(0,0,2,1));picture.put('#294b70',to=(0,1,2,2))
+            pictures.append(picture)
+        root._table_row_art=pictures
+        style.element_create(element,'image',pictures[0],('selected',pictures[1]),border=(0,0,0,1),sticky='nsew')
+    style.layout('Treeview.Row',[(element,{'sticky':'nsew'})])
 
 def rounded_button_styles(root, style):
     from PIL import ImageTk
@@ -103,7 +124,7 @@ def table(parent,columns):
     frame=ttk.Frame(parent);frame.pack(fill='both',expand=True,pady=12)
     tree=ttk.Treeview(frame,columns=[c[0] for c in columns],show='headings',selectmode='browse',height=8)
     for key,label,width in columns:
-        tree.heading(key,text=label);tree.column(key,width=width,minwidth=65)
+        tree.heading(key,text=label,anchor='w');tree.column(key,width=width,minwidth=65,anchor='w')
     sy=ttk.Scrollbar(frame,orient='vertical',command=tree.yview);sx=ttk.Scrollbar(frame,orient='horizontal',command=tree.xview)
     tree.configure(yscrollcommand=sy.set,xscrollcommand=sx.set)
     tree.grid(row=0,column=0,sticky='nsew');sy.grid(row=0,column=1,sticky='ns');sx.grid(row=1,column=0,sticky='ew')
