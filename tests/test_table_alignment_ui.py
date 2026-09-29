@@ -27,11 +27,11 @@ def test_table_headers_align_with_values_and_rows_have_visible_rules(scaling):
             assert any(color!=background for color in border), 'Falta linha separadora entre registros'
         root.update();shot=ImageGrab.grab()
         x,y,w,h=tree.bbox('0','client');ox=tree.winfo_rootx();oy=tree.winfo_rooty()
-        def first_text_x(top,bottom):
+        def first_text_x(top,bottom,color):
             return min(px for px in range(ox+x+1,ox+x+w-2)
                        for py in range(oy+top,oy+bottom)
-                       if all(channel>110 for channel in shot.getpixel((px,py))[:3]))
-        assert abs(first_text_x(2,y-2)-first_text_x(y+2,y+h-2))<=3
+                       if shot.getpixel((px,py))[:3]==color)
+        assert abs(first_text_x(2,y-2,(163,189,223))-first_text_x(y+2,y+h-2,(238,245,255)))<=3
         check_rule();tree.yview_scroll(2,'units');root.geometry('580x340+40+40');check_rule()
         tree.selection_set('3');root.update();assert tree.selection()==('3',)
         assert tree.item('3','values')==('Cliente 3','Serviço 3')
