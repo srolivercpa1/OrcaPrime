@@ -60,7 +60,7 @@ def table_row_styles(root, style):
     """Paint row rules through ttk so scrolling and selection remain native."""
     from tkinter import font
     style.configure('Treeview',rowheight=max(38,font.Font(root,font=(FONT,10)).metrics('linespace')+14))
-    style.configure('Treeview.Heading',padding=(6,10),relief='ridge',borderwidth=1)
+    style.configure('Treeview.Heading',padding=(8,10),relief='ridge',borderwidth=1)
     style.configure('Treeview',padding=0)
     style.layout('Treeview.Cell',[('Treeitem.padding',{'sticky':'nswe','children':[('Treeitem.text',{'sticky':'nswe'})]})])
     style.configure('Treeview.Cell',padding=(6,0))
