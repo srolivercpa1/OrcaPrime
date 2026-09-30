@@ -383,17 +383,37 @@ class WorkshopPages:
             ttk.Button(bar,text=label,command=self.safe(lambda m=mode:generate(m))).pack(side='left',padx=3)
 
     def page_stock(self):
-        heading(self.body,'Estoque de peças','Entradas, saídas e ajustes preservam o histórico de movimentações.')
-        bar=ttk.Frame(self.body);bar.pack(fill='x');search=tk.StringVar();ttk.Entry(bar,textvariable=search).pack(side='left')
-        tree=table(self.body,[('s','Código',110),('d','Descrição',240),('q','Saldo',90),('m','Mínimo',90),('p','Preço',110)])
-        def refresh(*_):
+        from .stock_categories import folded, category_for
+        heading(self.body,'Estoque de peças','Categorias automáticas pelo início do nome: Bateria, Tela, Cabo e outros tipos.')
+        bar=ttk.Frame(self.body);bar.pack(fill='x')
+        filters=ttk.Frame(self.body);filters.pack(fill='x',pady=(10,0))
+        filters.columnconfigure((0,1),weight=1,uniform='stock_filters')
+        ttk.Label(filters,text='Categoria').grid(row=0,column=0,sticky='w')
+        ttk.Label(filters,text='Buscar peça / código').grid(row=0,column=1,sticky='w',padx=(10,0))
+        category=tk.StringVar(value='Todas as categorias');search=tk.StringVar()
+        categories=ttk.Combobox(filters,textvariable=category,state='readonly')
+        categories.grid(row=1,column=0,sticky='ew')
+        ttk.Entry(filters,textvariable=search).grid(row=1,column=1,sticky='ew',padx=(10,0))
+        parts=[]
+        tree=table(self.body,[('c','Categoria',140),('s','Código',110),('d','Descrição',240),('q','Saldo',90),('m','Mínimo',90),('p','Preço',110)])
+        def refresh(reload=True):
+            nonlocal parts
+            if reload:
+                parts=self.workshop.list_parts()
+                choices=['Todas as categorias']+sorted({p['category'] for p in parts},key=folded)
+                categories.configure(values=choices)
+                if category.get() not in choices:category.set('Todas as categorias')
             tree.delete(*tree.get_children())
-            for p in self.workshop.list_parts():
-                if search.get().casefold() not in str(p).casefold():continue
-                tree.insert('','end',iid=str(p['id']),values=(p.get('sku',''),p['description'],p.get('quantity','0'),p.get('minimum','0'),brl(p.get('price_cents',0))))
+            for p in sorted(parts,key=lambda p:(folded(p['category']),folded(p['description']),p['id'])):
+                if category.get()!='Todas as categorias' and p['category']!=category.get():continue
+                if folded(search.get()) not in folded(p['description']+' '+p.get('sku','')+' '+p['category']):continue
+                tree.insert('','end',iid=str(p['id']),values=(p['category'],p.get('sku',''),p['description'],p.get('quantity','0'),p.get('minimum','0'),brl(p.get('price_cents',0))))
         def edit(new=False):
             p={} if new else next(p for p in self.workshop.list_parts() if p['id']==self._selected(tree))
-            def submit(d):self.workshop.save_part(d,p.get('id'));refresh()
+            def submit(d):
+                pid=self.workshop.save_part(d,p.get('id'))
+                category.set(category_for(d['description']));search.set('');refresh()
+                tree.selection_set(str(pid));tree.see(str(pid))
             self._dialog('Peça',[('description','Descrição *',None),('sku','Código',None),('price','Preço de venda (R$)',None),('cost','Custo (R$)',None),('minimum','Estoque mínimo',None)],dict(p,price=decimal_text(p.get('price_cents',0)),cost=decimal_text(p.get('cost_cents',0)),minimum=p.get('minimum','0')),submit)
         def move():
             pid=self._selected(tree)
@@ -405,8 +425,9 @@ class WorkshopPages:
             for m in self.workshop.list_movements():
                 if m['part_id']!=pid:continue
                 listing.insert('','end',values=(m.get('created_at',''),m.get('kind',''),m.get('quantity',''),m.get('note','')))
-        for label,action in [('Nova peça',lambda:edit(True)),('Editar',edit),('Movimentar',move),('Histórico',movements)]:ttk.Button(bar,text=label,command=self.safe(action)).pack(side='right',padx=3)
-        search.trace_add('write',refresh);refresh()
+        for label,action in [('Nova peça',lambda:edit(True)),('Editar',edit),('Movimentar',move),('Histórico',movements)]:ttk.Button(bar,text=label,command=self.safe(action)).pack(side='left',padx=(0,6))
+        categories.bind('<<ComboboxSelected>>',lambda _:refresh(False))
+        search.trace_add('write',lambda *_:refresh(False));refresh()
 
     def page_suppliers(self):
         heading(self.body,'Fornecedores','Contatos e dados para compras de peças e insumos.')

@@ -250,7 +250,11 @@ class Workshop(FinanceExtras):
             return nid
     def list_parts(self):
         self._allow('ATENDIMENTO','TECNICO','FINANCEIRO')
-        with self.connect() as db: return [dict(json.loads(r['data']),id=r['id'],quantity=quantity(r['stock']),stock_milli=r['stock']) for r in db.execute('SELECT * FROM ws_parts ORDER BY id DESC')]
+        from .stock_categories import category_for
+        with self.connect() as db:
+            parts=[dict(json.loads(r['data']),id=r['id'],quantity=quantity(r['stock']),stock_milli=r['stock']) for r in db.execute('SELECT * FROM ws_parts ORDER BY id DESC')]
+        for part in parts:part['category']=category_for(part['description'])
+        return parts
     def save_part(self,data,id_=None):
         self._allow('ATENDIMENTO','FINANCEIRO')
         d={k:str(data.get(k,'')).strip()[:1000] for k in ('description','sku')}

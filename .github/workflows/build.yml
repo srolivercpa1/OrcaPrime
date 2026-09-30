@@ -81,4 +81,4 @@ jobs:
             echo "A Release $RELEASE_TAG já existe; não será substituída. Incremente a versão para publicar outra."
             exit 0
           fi
-          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Excluir orçamento" --notes "Botão Excluir orçamento ao lado de Novo, disponível ao administrador nas abas Em atendimento e Entregues. Confirmação com número e cliente antes de apagar; cadastro do cliente e OS preservados. Versão visível 1.0; instalador revisão 1.0.11." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 release/OrcaPrime-Portable.zip release/OrcaPrime-Portable.zip.sha256
+          gh release create "$RELEASE_TAG" --target "$RELEASE_SHA" --title "OrçaPrime 1.0 — Categorias de estoque" --notes "Estoque separado automaticamente pelo início do nome do produto: Bateria, Tela, Cabo e outros tipos. Filtro por categoria, busca por descrição ou código e classificação dos produtos já cadastrados. Versão visível 1.0; instalador revisão 1.0.12." release/OrcaPrime-Setup.exe release/OrcaPrime-Setup.exe.sha256 release/OrcaPrime-Portable.zip release/OrcaPrime-Portable.zip.sha256
