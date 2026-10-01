@@ -57,7 +57,7 @@ def test_browser_workflow(tmp_path):
             page.get_by_role('heading',name='Histórico do atendimento').wait_for()
             page.get_by_role('button',name='Editar OS').click()
             page.locator('[name=status]').select_option('EM_ANDAMENTO');page.get_by_role('button',name='Salvar cadastro').click();page.locator('dialog').wait_for(state='hidden')
-            page.get_by_text('Em andamento',exact=True).wait_for(state='visible')
+            page.get_by_role('cell',name='Em andamento',exact=True).wait_for(state='visible')
             page.set_viewport_size({'width':390,'height':844});page.get_by_role('button',name='Abrir menu').click();page.get_by_role('button',name='Início',exact=True).click()
             page.get_by_role('heading',name='Visão geral').wait_for()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
