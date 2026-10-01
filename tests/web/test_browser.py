@@ -18,7 +18,13 @@ def test_browser_workflow(tmp_path):
     app=create_app(url)
     owner=TestClient(app);r=owner.post('/api/login',json={'email':'owner@example.test','password':'Owner-password-123'})
     owner.headers['X-CSRF-Token']=r.json()['csrf']
-    owner.post('/api/companies',json={'name':'OliverTech Soluções','email':'preview@example.test','password':'Preview-only-123','days':30})
+    company=owner.post('/api/companies',json={'name':'OliverTech Soluções','email':'preview@example.test','password':'Preview-only-123','days':30}).json()
+    from webapp.db import Record,User
+    from webapp.security import hash_password
+    with app.state.factory.begin() as db:
+        db.add(Record(company_id=company['id'],kind='entries',created=946728000,data={'name':'Entrada antiga','direction':'ENTRADA','amount':10000,'paid':True,'due':''}))
+        db.add(Record(company_id=company['id'],kind='entries',data={'name':'Entrada atual','direction':'ENTRADA','amount':20000,'paid':True,'due':''}))
+        db.add(User(company_id=company['id'],name='Técnico',email='tech@example.test',password=hash_password('Preview-only-123'),role='TECNICO'))
     import socket
     sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
     server=uvicorn.Server(uvicorn.Config(app,log_level='error'))
@@ -28,7 +34,7 @@ def test_browser_workflow(tmp_path):
         time.sleep(.05)
     try:
         with sync_playwright() as p:
-            browser=p.chromium.launch(args=['--no-sandbox'])
+            browser=p.chromium.launch(channel=os.environ.get('ORCAPRIME_BROWSER_CHANNEL'),args=['--no-sandbox'])
             page=browser.new_page(viewport={'width':1366,'height':900})
             errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
             page.goto(f'http://127.0.0.1:{port}')
@@ -51,7 +57,7 @@ def test_browser_workflow(tmp_path):
             page.get_by_role('heading',name='Histórico do atendimento').wait_for()
             page.get_by_role('button',name='Editar OS').click()
             page.locator('[name=status]').select_option('EM_ANDAMENTO');page.get_by_role('button',name='Salvar cadastro').click();page.locator('dialog').wait_for(state='hidden')
-            assert page.get_by_text('Em andamento',exact=True).is_visible()
+            page.get_by_text('Em andamento',exact=True).wait_for(state='visible')
             page.set_viewport_size({'width':390,'height':844});page.get_by_role('button',name='Abrir menu').click();page.get_by_role('button',name='Início',exact=True).click()
             page.get_by_role('heading',name='Visão geral').wait_for()
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
@@ -60,11 +66,19 @@ def test_browser_workflow(tmp_path):
             page.get_by_role('button',name='Relatórios',exact=True).click()
             page.locator('#from-date').fill('2000-01-01');page.locator('#to-date').fill('2000-12-31')
             page.get_by_role('button',name='Aplicar período').click()
-            assert page.locator('#report-count').inner_text()=='0 lançamentos no período'
+            assert page.locator('#report-count').inner_text()=='1 lançamentos no período'
+            assert page.locator('#report-balance').inner_text().replace('\xa0',' ')=='R$ 100,00'
             page.get_by_role('button',name='Clientes',exact=True).click()
             page.get_by_role('button',name='Excluir',exact=True).click()
             page.get_by_text('iPhone 13',exact=False).last.wait_for()
             page.get_by_role('button',name='Cancelar',exact=True).click()
+            page.get_by_role('button',name='Sair da conta',exact=True).click()
+            page.locator('[name=email]').fill('tech@example.test');page.locator('[name=password]').fill('Preview-only-123');page.get_by_role('button',name='Entrar no OrçaPrime').click()
+            page.get_by_role('heading',name='Visão geral').wait_for()
+            page.get_by_role('button',name='Clientes',exact=True).click()
+            page.get_by_role('heading',name='Clientes',exact=True).wait_for()
+            assert page.get_by_role('button',name='Editar',exact=True).count()==0
+            assert page.get_by_role('button',name='Novo cliente',exact=True).count()==0
             assert not errors,errors
             browser.close()
     finally:
