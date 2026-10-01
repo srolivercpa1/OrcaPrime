@@ -1,0 +1,48 @@
+name: OrçaPrime Web — testes e pacote
+on:
+  push:
+    branches: [feat/orcaprime-web-1.0]
+  pull_request:
+    paths: ['webapp/**', 'tests/web/**', 'requirements-web.txt', 'compose.web.yml', '.github/workflows/web.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: orcaprime_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt -r requirements-web.txt playwright==1.51.0
+      - run: python -m playwright install --with-deps chromium
+      - name: Testar aplicação e interface real
+        env:
+          ORCAPRIME_BROWSER_TESTS: '1'
+          ORCAPRIME_SCREENSHOTS: web-preview
+        run: python -m pytest -q
+      - name: Testar PostgreSQL
+        env:
+          ORCAPRIME_TEST_DATABASE: postgresql+psycopg://postgres:test-only-password@localhost:5432/orcaprime_test
+        run: python -m pytest tests/web/test_web.py -q
+      - name: Verificar imagem de produção
+        run: docker build -f webapp/Dockerfile -t orcaprime-web:1.0 .
+      - name: Empacotar versão web
+        run: zip -r OrçaPrime-Web-1.0.zip webapp assets/brand.png orcaprime/__init__.py orcaprime/stock_categories.py requirements-server.txt requirements-web.txt compose.web.yml .env.web.example
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: OrcaPrime-Web-1.0
+          path: |
+            OrçaPrime-Web-1.0.zip
+            web-preview/

@@ -1,0 +1,6 @@
+-r requirements-server.txt
+SQLAlchemy==2.0.54
+psycopg[binary]==3.3.6
+python-multipart==0.0.32
+reportlab==5.0.1
+pillow==12.3.0

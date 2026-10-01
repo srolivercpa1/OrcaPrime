@@ -22,3 +22,8 @@ activation.dat
 device-id.txt
 *.log
 .superpowers/
+
+.env.web
+web-preview/
+*.json.gz
+orcaprime-web-local.db
