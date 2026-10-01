@@ -57,6 +57,11 @@ jobs:
         run: python -m pytest tests/web/test_web.py -q
       - name: Verificar imagem de produção
         run: docker build -f webapp/Dockerfile -t orcaprime-web:1.0 .
+      - name: Verificar inicialização da imagem
+        run: |
+          docker run -d --name orcaprime-web-test --network host -e DATABASE_URL=postgresql+psycopg://postgres:test-only-password@localhost:5432/orcaprime_test -e PUBLIC_ORIGIN=http://127.0.0.1:8080 orcaprime-web:1.0
+          trap 'docker rm -f orcaprime-web-test' EXIT
+          curl --retry 10 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8080/health
       - name: Empacotar versão web
         run: zip -r OrçaPrime-Web-1.0.zip webapp assets/brand.png orcaprime/__init__.py orcaprime/stock_categories.py requirements-server.txt requirements-web.txt compose.web.yml .env.web.example
       - uses: actions/upload-artifact@v4
