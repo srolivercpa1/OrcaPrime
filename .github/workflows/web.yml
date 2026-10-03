@@ -1,0 +1,73 @@
+name: OrçaPrime Web — testes e pacote
+on:
+  push:
+    branches: [feat/orcaprime-web-1.0]
+  pull_request:
+    paths: ['webapp/**', 'tests/web/**', 'requirements-web.txt', 'compose.web.yml', 'render.yaml', '.github/workflows/web*.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: orcaprime_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements-dev.txt -r requirements-web.txt playwright==1.51.0
+      - run: google-chrome --version
+      - name: Testar aplicação e interface real
+        env:
+          ORCAPRIME_BROWSER_TESTS: '1'
+          ORCAPRIME_BROWSER_CHANNEL: chrome
+          ORCAPRIME_SCREENSHOTS: web-preview
+        run: python -m pytest -q
+      - name: Salvar prévias visuais para revisão
+        if: always() && github.event_name == 'push'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const branch = 'preview/orcaprime-web';
+            const owner = context.repo.owner, repo = context.repo.repo;
+            try { await github.rest.git.getRef({owner, repo, ref: 'heads/' + branch}); }
+            catch (e) { if (e.status !== 404) throw e; await github.rest.git.createRef({owner, repo, ref: 'refs/heads/' + branch, sha: context.sha}); }
+            for (const name of ['orcaprime-login.png', 'orcaprime-painel.png', 'orcaprime-celular.png', 'orcaprime-primeiro-acesso.png']) {
+              const source = 'web-preview/' + name;
+              if (!fs.existsSync(source)) continue;
+              const path = 'docs/web-preview/' + name;
+              let sha;
+              try { sha = (await github.rest.repos.getContent({owner, repo, path, ref: branch})).data.sha; }
+              catch (e) { if (e.status !== 404) throw e; }
+              await github.rest.repos.createOrUpdateFileContents({owner, repo, branch, path, sha, message: 'docs: prévia visual OrçaPrime Web [skip ci]', content: fs.readFileSync(source).toString('base64')});
+            }
+      - name: Testar PostgreSQL
+        env:
+          ORCAPRIME_TEST_DATABASE: postgresql+psycopg://postgres:test-only-password@localhost:5432/orcaprime_test
+        run: python -m pytest tests/web/test_web.py tests/web/test_hosting.py -q
+      - name: Verificar imagem de produção
+        run: docker build -f webapp/Dockerfile -t orcaprime-web:1.0 .
+      - name: Verificar inicialização da imagem
+        run: |
+          docker run -d --name orcaprime-web-test --network host -e DATABASE_URL=postgresql+psycopg://postgres:test-only-password@localhost:5432/orcaprime_test -e PUBLIC_ORIGIN=http://127.0.0.1:8080 orcaprime-web:1.0
+          trap 'docker rm -f orcaprime-web-test' EXIT
+          curl --retry 10 --retry-connrefused --retry-delay 1 -fsS http://127.0.0.1:8080/health
+      - name: Empacotar versão web
+        run: zip -r OrçaPrime-Web-1.0.zip webapp assets/brand.png orcaprime/__init__.py orcaprime/stock_categories.py requirements-server.txt requirements-web.txt compose.web.yml .env.web.example render.yaml .github/workflows/web-backup.yml -x '*/__pycache__/*' '*.pyc'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: OrcaPrime-Web-1.0
+          path: |
+            OrçaPrime-Web-1.0.zip
+            web-preview/

@@ -1,0 +1,12 @@
+*
+!requirements-server.txt
+!requirements-web.txt
+!webapp/
+!webapp/**
+!assets/
+!assets/brand.png
+!orcaprime/
+!orcaprime/__init__.py
+!orcaprime/stock_categories.py
+**/__pycache__/
+**/*.pyc

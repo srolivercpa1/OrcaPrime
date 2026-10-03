@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: orcaprime
+      POSTGRES_USER: orcaprime
+      POSTGRES_PASSWORD: ${WEB_DB_PASSWORD:?Defina WEB_DB_PASSWORD com uma senha aleatoria forte}
+    volumes:
+      - web-db:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U orcaprime]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  web:
+    build:
+      context: .
+      dockerfile: webapp/Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://orcaprime:${WEB_DB_PASSWORD}@db/orcaprime
+      PUBLIC_ORIGIN: https://${WEB_DOMAIN:?Defina WEB_DOMAIN com seu dominio}
+      BACKUP_DIR: /data/backup
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - web-backup:/data/backup
+    expose: [8080]
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN}
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./webapp/Caddyfile:/etc/caddy/Caddyfile:ro
+      - web-tls:/data
+    depends_on: [web]
+volumes:
+  web-db:
+  web-backup:
+  web-tls:
