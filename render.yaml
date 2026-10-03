@@ -2,15 +2,17 @@
 services:
   - type: web
     name: orcaprime-web
-    runtime: docker
+    runtime: python
     plan: free
     region: ohio
     branch: feat/orcaprime-web-1.0
-    dockerfilePath: ./webapp/Dockerfile
-    dockerContext: .
+    buildCommand: pip install --no-cache-dir -r requirements-web.txt
+    startCommand: python -m uvicorn webapp.server:application --factory --host 0.0.0.0 --port $PORT --workers 1 --proxy-headers --forwarded-allow-ips '*'
     healthCheckPath: /health
     autoDeployTrigger: 'off'
     envVars:
+      - key: PYTHON_VERSION
+        value: '3.12.15'
       - key: DATABASE_URL
         sync: false
       - key: SETUP_TOKEN

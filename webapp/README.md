@@ -71,6 +71,8 @@ O arquivo `render.yaml` cria **somente um Web Service gratuito**, sem disco ou P
 
 O Blueprint desativa atualizações automáticas. Publique novos commits somente após os testes. Não configure `BACKUP_DIR` no Render Free: arquivos locais são temporários e o processo pode dormir.
 
+O Render usa o runtime Python 3.12.15, instala `requirements-web.txt` e inicia a mesma aplicação Uvicorn na porta `$PORT`. O Dockerfile continua disponível para instalações em contêiner. Para criação pela integração Render, use esses comandos do Blueprint e desative auto-deploy; a integração não oferece o campo de health check, portanto confirme `/health` após publicar e configure esse caminho no painel quando disponível.
+
 Na instalação já preparada, `orcaprime_app` tem leitura e escrita somente nas seis tabelas `web_*`; `orcaprime_backup` tem somente leitura e não acessa `web_sessions`. Ambos são criados inicialmente com `NOLOGIN`: habilite `LOGIN` com senhas aleatórias fortes apenas ao configurar as variáveis privadas da hospedagem e do backup. Use a conexão com pool para a aplicação e a conexão direta para o backup. Não conceda acesso ao esquema `neon_auth` nem coloque a senha do proprietário do banco no serviço. Alterações futuras no esquema devem ser aplicadas separadamente com a conta de administração; o usuário da aplicação não cria tabelas.
 
 ### Backup diário externo e criptografado
