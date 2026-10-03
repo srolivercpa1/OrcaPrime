@@ -7,6 +7,7 @@ from pathlib import Path
 from fastapi import FastAPI,Request,Depends,HTTPException
 from fastapi.responses import JSONResponse,FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
 from pydantic import BaseModel,Field,ConfigDict
 from typing import Literal
 from sqlalchemy import select,delete
@@ -44,7 +45,7 @@ class UserChange(Input):
 def user_json(u): return {'id':u.id,'name':u.name,'email':u.email,'role':u.role,'active':u.active}
 def company_json(c): return {'id':c.id,'name':c.name,'active':c.active,'expires':c.expires,'settings':c.settings}
 
-def create_app(database_url,secure_cookie=False,public_origin=None):
+def create_app(database_url,secure_cookie=False,public_origin=None,setup_token=None):
     app=FastAPI(title='OrçaPrime Web',version='1.0',docs_url=None,redoc_url=None,openapi_url=None)
     engine,factory=database(database_url)
     app.state.factory=factory
@@ -95,7 +96,7 @@ def create_app(database_url,secure_cookie=False,public_origin=None):
                 if size>8*1024*1024: return JSONResponse({'detail':'Arquivo ou solicitação acima de 8 MB.'},413)
                 chunks.append(chunk)
             request._body=b''.join(chunks)
-        if request.url.path=='/api/login' and request.method=='POST':
+        if request.url.path in ('/api/login','/api/setup') and request.method=='POST':
             ip=request.client.host if request.client else 'unknown'; now=time.monotonic()
             with lock:
                 while buckets and now-next(iter(buckets.values()))[-1]>900: buckets.popitem(last=False)
@@ -110,6 +111,10 @@ def create_app(database_url,secure_cookie=False,public_origin=None):
         return response
     @app.exception_handler(IntegrityError)
     async def conflict(request,error): return JSONResponse({'detail':'Registro em conflito. Verifique se este e-mail já está cadastrado.'},409)
+    @app.exception_handler(RequestValidationError)
+    async def invalid_input(request,error):
+        # Pydantic's default response includes input values, including passwords/codes.
+        return JSONResponse({'detail':'Confira os campos e tente novamente.'},422)
     @app.get('/health')
     def health(): return {'status':'ok','version':'1.0'}
     @app.post('/api/login')
@@ -182,6 +187,8 @@ def create_app(database_url,secure_cookie=False,public_origin=None):
     @app.delete('/api/users/{id}')
     def delete_user(id:str,u=Depends(actor),db=Depends(db_dep)):
         x=target_user(db,u,id);preserve_admin(db,x);db.execute(delete(Session).where(Session.user_id==id));db.delete(x);audit(db,u,'EXCLUIR_USUARIO',id);return {'ok':True}
+    from .setup import register as register_setup
+    register_setup(app,db_dep,setup_token)
     from .operations import register
     register(app,db_dep,actor,require,audit)
     static=Path(__file__).parent/'static'

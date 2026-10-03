@@ -1,0 +1,16 @@
+# Create the Neon database separately; only a free web service is provisioned here.
+services:
+  - type: web
+    name: orcaprime-web
+    runtime: docker
+    plan: free
+    branch: feat/orcaprime-web-1.0
+    dockerfilePath: ./webapp/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SETUP_TOKEN
+        generateValue: true

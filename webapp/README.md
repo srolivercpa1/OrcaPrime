@@ -58,3 +58,44 @@ O bloqueio de assinatura desativa o acesso da empresa e invalida as sessões, se
 `python -m pytest -q`
 
 A CI web testa também PostgreSQL, instala o navegador de teste e verifica navegação, cadastro, alinhamento à direita no computador e rolagem no celular. Artefatos de imagem permitem inspecionar o resultado.
+
+## Hospedagem gratuita: Render + Neon
+
+O arquivo `render.yaml` cria **somente um Web Service gratuito**, sem disco ou PostgreSQL do Render. O banco externo Neon guarda registros, fotos e logotipos. A aplicação continua na versão 1.0. O Render pode suspender o serviço por inatividade; o primeiro acesso pode demorar. As cotas de banco, transferência e execução dos provedores precisam ser acompanhadas.
+
+1. No Neon, crie um projeto exclusivo para OrçaPrime Web e obtenha sua conexão PostgreSQL com `sslmode=require`. Use uma região próxima do serviço Render.
+2. No Render, crie um Blueprint do repositório `srolivercpa1/OrcaPrime`, branch `feat/orcaprime-web-1.0`, arquivo `render.yaml`. Confirme o plano Free. Informe a conexão do Neon em `DATABASE_URL`, somente no campo privado de ambiente.
+3. O endereço HTTPS do Render é reconhecido por `RENDER_EXTERNAL_URL`. Para domínio próprio, configure `PUBLIC_ORIGIN` com a origem exata, sem caminho. `/health` deve retornar versão `1.0`.
+4. Em Environment do Render, consulte `SETUP_TOKEN`, gerado aleatoriamente. Abra `/setup` no endereço publicado e informe esse código, seu e-mail e sua senha. Não envie o código por chat nem o coloque no endereço da página. Só a primeira conta pode receber o perfil de proprietário.
+5. Entre pelo login, cadastre as empresas e seus administradores. Após concluir o primeiro acesso, remova `SETUP_TOKEN` do ambiente. A presença do proprietário já bloqueia novos cadastros, inclusive em reinícios.
+
+O Blueprint desativa atualizações automáticas. Publique novos commits somente após os testes. Não configure `BACKUP_DIR` no Render Free: arquivos locais são temporários e o processo pode dormir.
+
+### Backup diário externo e criptografado
+
+`.github/workflows/web-backup.yml` prepara execução diária às **03:17 de Brasília**, independente da aplicação estar acordada. Cada snapshot inclui banco, fotos e logotipos, exclui sessões e é comprimido com gzip e criptografado com Fernet antes de qualquer gravação. Artefatos têm retenção de 14 dias. O nome e horário do arquivo ficam visíveis; o conteúdo exige a chave privada.
+
+**Para ativar:**
+
+- Crie um usuário PostgreSQL exclusivo de backup com `CONNECT`, `USAGE` no schema e `SELECT` nas tabelas `web_*`. O comando de backup não cria tabelas. Não reutilize a credencial de backup para restaurar.
+- Configure o GitHub Secret `ORCAPRIME_BACKUP_DATABASE_URL` com essa conexão e `ORCAPRIME_BACKUP_ENCRYPTION_KEY` com uma chave Fernet gerada por `Fernet.generate_key()`. Guarde uma segunda cópia da chave em seu gerenciador de senhas; perder a chave impede restauração. Nunca grave a chave no código, em artefatos ou nos logs.
+- Coloque o workflow de backup na **branch padrão** para habilitar o agendamento; ele lê o código da branch web. Faça essa integração isoladamente, preservando o fluxo de publicação do aplicativo Windows.
+- Execute manualmente o workflow e valide uma restauração em banco descartável antes de considerar o backup ativo. Confirme o histórico de execuções e habilite as notificações de falha na sua conta GitHub. Em repositórios públicos, agendamentos podem ser desativados após 60 dias sem atividade; o GitHub também pode atrasar execuções. Não há garantia de horário exato.
+
+Para cópia criptografada manual, configure `DATABASE_URL` e `BACKUP_ENCRYPTION_KEY` em ambiente privado e execute:
+
+```bash
+python -m webapp.cli backup --encrypted --directory backup
+```
+
+Para restaurar, baixe e extraia o artefato, configure `DATABASE_URL` apontando para um banco **vazio**, forneça a mesma `BACKUP_ENCRYPTION_KEY` e execute:
+
+```bash
+python -m webapp.cli restore --file backup/orcaprime-web-AAAAMMDD-HHMMSS-micros.json.gz.enc
+```
+
+Chave incorreta, adulteração e destino ocupado são recusados. O limite é 512 MiB de JSON descomprimido por snapshot; fotos consomem boa parte desse espaço. Backups existentes `.json.gz` continuam compatíveis com a restauração sem chave. O comando sem `--encrypted` continua destinado a cópias locais privadas, nunca ao envio para artefatos públicos.
+
+A presença desses arquivos no repositório **não significa que contas, banco, site ou agendamento já foram provisionados**. A publicação só termina após confirmar acesso às contas, endereço público e recuperação de um backup real.
+
+Referências: [Blueprint Render](https://render.com/docs/blueprint-spec), [limites gratuitos Render](https://render.com/docs/free), [variáveis Render](https://render.com/docs/environment-variables), [agendamento GitHub](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule), [Fernet](https://cryptography.io/en/stable/fernet/).
