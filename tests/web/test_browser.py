@@ -55,7 +55,7 @@ def test_browser_owner_setup(tmp_path):
 
 def test_browser_workflow(tmp_path):
     import uvicorn
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import sync_playwright, expect
     from fastapi.testclient import TestClient
     from webapp.api import create_app
     from webapp.security import bootstrap
@@ -132,9 +132,9 @@ def test_browser_workflow(tmp_path):
             assert page.locator('html').get_attribute('data-theme')=='light'
             page.get_by_label('Tema',exact=True).select_option('system')
             page.emulate_media(color_scheme='dark')
-            page.wait_for_function("document.documentElement.dataset.theme === 'dark'")
+            expect(page.locator('html')).to_have_attribute('data-theme','dark')
             page.emulate_media(color_scheme='light')
-            page.wait_for_function("document.documentElement.dataset.theme === 'light'")
+            expect(page.locator('html')).to_have_attribute('data-theme','light')
             page.get_by_label('Tema',exact=True).select_option('dark')
             page.get_by_role('button',name='Início',exact=True).click()
             page.get_by_role('heading',name='Visão geral').wait_for()
