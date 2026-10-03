@@ -16,16 +16,16 @@ Concurrent first owners, setup token exposure through validation/logs, failed en
 ### Task 1: One-time setup and Render configuration
 Files: webapp/security.py, webapp/setup.py, webapp/api.py, webapp/server.py, webapp/static/setup.html, webapp/static/setup.js, render.yaml, tests/web/test_hosting.py.
 Interface: create_app(..., setup_token=None); create_owner(db, email, password) flushes a fixed singleton owner ID; setup endpoints check token and existing owner; production_config(environ) returns normalized database URL and validated origin.
-- [ ] Add failing tests for disabled/wrong token, CSRF origin, successful setup and repeated/concurrent setup, hashing and production configuration.
-- [ ] Implement helpers, UI and blueprint; preserve existing bootstrap CLI.
-- [ ] Run the API tests and actual browser setup flow; commit.
+- [x] Add failing tests for disabled/wrong token, CSRF origin, successful setup and repeated/concurrent setup, hashing and production configuration.
+- [x] Implement helpers, UI and blueprint; preserve existing bootstrap CLI.
+- [x] Run the API tests and actual browser setup flow; commit.
 
 ### Task 2: Encrypted external backup
 Files: webapp/backup.py, webapp/cli.py, tests/web/test_hosting.py, .github/workflows/web-backup.yml, .github/workflows/web.yml, webapp/README.md.
 Interface: backup(engine, directory, keep=14, encryption_key=None); restore(url, path, encryption_key=None); CLI backup --encrypted requires BACKUP_ENCRYPTION_KEY and never initializes schema.
-- [ ] Add failing tests for encryption roundtrip, photos/no sessions, missing/wrong key, tampering, nonempty destination and read-only backup connection.
-- [ ] Add authenticated encryption around gzip bytes before atomic private file write; schedule encrypted-only artifacts with 14-day retention and credentials only at the backup step.
-- [ ] Run web and regression tests, Docker and browser CI; obtain independent review and fix important findings.
+- [x] Add failing tests for encryption roundtrip, photos/no sessions, missing/wrong key, tampering, nonempty destination and read-only backup connection.
+- [x] Add authenticated encryption around gzip bytes before atomic private file write; schedule encrypted-only artifacts with 14-day retention and credentials only at the backup step.
+- [x] Run web and regression tests, Docker and browser CI; obtain independent review and fix important findings.
 
 ### Task 3: Publish
 - [ ] Verify connections to both providers, create only the authorized free resources and configure private environment variables.
@@ -44,3 +44,9 @@ Interface: backup(engine, directory, keep=14, encryption_key=None); restore(url,
 - Independent review: no material findings; three configuration/backup/CLI tests independently passed. Live deployment, PostgreSQL, browser and Docker remain external verification gates, not waived.
 - Browser CI found two installation links: the initial unauthorized /me response and its outer catch each render login while their setup checks complete asynchronously. Bind each result to its original connected footer and make insertion idempotent; existing browser test reproduces the failure.
 - Read-only backup test permits PostgreSQL driver SHOW queries as well as SELECT, based on SQLAlchemy's actual initialization code; neither changes data.
+
+- Final CI GREEN on remote c69cbec53dc0cd50c068b39365e2c30cb142f154: run 37087919248, job 111101923738. Full suite 150 passed / 51 skipped, PostgreSQL 16 passed, both browser flows passed, Docker image built and returned health version 1.0. Setup mobile screenshot inspected.
+- Artifact 11261058183 (OrcaPrime-Web-1.0) contains the verified deployment package. Old failure was run 37087774852; corrected run is successful.
+- Pending: Render plugin still reports installed=false. Neon reports installed=true but no callable Neon tools are exposed in the current tool registry. No database, public site, installation code, production credentials or scheduled backup has been provisioned; continue account connection/provisioning next.
+
+- Connection follow-up 2026-10-03: Neon tools are now available. describe_project({}) returned INVALID_ARGUMENT because connection is unscoped and project_id is required. This exposed tool set has neither list_projects nor create_project; no linked .neon file or authenticated CLI/API key is available. Need the user’s Neon project URL/ID to target the database. Render still reports installed=false. No resource was modified.
