@@ -12,9 +12,9 @@ function fiscalField(key, values, options) {
   const limits = {legal_name:160,trade_name:160,cnpj:18,state_registration:30,municipal_registration:30,
     street:160,number:30,complement:100,district:100,city:100,municipality_code:7,postal_code:9};
   const value = values[key] ?? '';
-  const control = options ? `<select name="${key}">${options.map(([id,label]) => `<option value="${esc(id)}" ${String(value) === id ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>`
-    : `<input name="${key}" value="${esc(value)}" ${['series','next_number'].includes(key) ? `type="number" min="${key === 'series' ? 0 : 1}" max="${key === 'series' ? 999 : 999999999}" step="1" required` : `type="text" maxlength="${limits[key]}"`} ${['municipality_code','postal_code'].includes(key) ? 'inputmode="numeric"' : ''}>`;
-  return `<label class="field">${fiscalLabels[key]}${control}</label>`;
+  const control = options ? `<select name="${key}" aria-labelledby="fiscal-label-${key}">${options.map(([id,label]) => `<option value="${esc(id)}" ${String(value) === id ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>`
+    : `<input name="${key}" aria-labelledby="fiscal-label-${key}" value="${esc(value)}" ${['series','next_number'].includes(key) ? `type="number" min="${key === 'series' ? 0 : 1}" max="${key === 'series' ? 999 : 999999999}" step="1" required` : `type="text" maxlength="${limits[key]}"`} ${['municipality_code','postal_code'].includes(key) ? 'inputmode="numeric"' : ''}>`;
+  return `<label class="field"><span id="fiscal-label-${key}">${fiscalLabels[key]}</span>${control}</label>`;
 }
 
 function fiscalStatus(data) {
