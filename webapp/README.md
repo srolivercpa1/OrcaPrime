@@ -63,13 +63,15 @@ A CI web testa também PostgreSQL, instala o navegador de teste e verifica naveg
 
 O arquivo `render.yaml` cria **somente um Web Service gratuito**, sem disco ou PostgreSQL do Render. O banco externo Neon guarda registros, fotos e logotipos. A aplicação continua na versão 1.0. O Render pode suspender o serviço por inatividade; o primeiro acesso pode demorar. As cotas de banco, transferência e execução dos provedores precisam ser acompanhadas.
 
-1. No Neon, crie um projeto exclusivo para OrçaPrime Web e obtenha sua conexão PostgreSQL com `sslmode=require`. Use uma região próxima do serviço Render.
+1. No Neon, utilize o projeto exclusivo do OrçaPrime Web existente ou crie um para uma nova instalação. A configuração Render usa Ohio; mantenha o banco próximo do serviço. Prepare as tabelas com a conta de administração e use uma conexão PostgreSQL com `sslmode=require` de um usuário restrito à aplicação em `DATABASE_URL`.
 2. No Render, crie um Blueprint do repositório `srolivercpa1/OrcaPrime`, branch `feat/orcaprime-web-1.0`, arquivo `render.yaml`. Confirme o plano Free. Informe a conexão do Neon em `DATABASE_URL`, somente no campo privado de ambiente.
 3. O endereço HTTPS do Render é reconhecido por `RENDER_EXTERNAL_URL`. Para domínio próprio, configure `PUBLIC_ORIGIN` com a origem exata, sem caminho. `/health` deve retornar versão `1.0`.
 4. Em Environment do Render, consulte `SETUP_TOKEN`, gerado aleatoriamente. Abra `/setup` no endereço publicado e informe esse código, seu e-mail e sua senha. Não envie o código por chat nem o coloque no endereço da página. Só a primeira conta pode receber o perfil de proprietário.
 5. Entre pelo login, cadastre as empresas e seus administradores. Após concluir o primeiro acesso, remova `SETUP_TOKEN` do ambiente. A presença do proprietário já bloqueia novos cadastros, inclusive em reinícios.
 
 O Blueprint desativa atualizações automáticas. Publique novos commits somente após os testes. Não configure `BACKUP_DIR` no Render Free: arquivos locais são temporários e o processo pode dormir.
+
+Na instalação já preparada, `orcaprime_app` tem leitura e escrita somente nas seis tabelas `web_*`; `orcaprime_backup` tem somente leitura e não acessa `web_sessions`. Ambos são criados inicialmente com `NOLOGIN`: habilite `LOGIN` com senhas aleatórias fortes apenas ao configurar as variáveis privadas da hospedagem e do backup. Use a conexão com pool para a aplicação e a conexão direta para o backup. Não conceda acesso ao esquema `neon_auth` nem coloque a senha do proprietário do banco no serviço. Alterações futuras no esquema devem ser aplicadas separadamente com a conta de administração; o usuário da aplicação não cria tabelas.
 
 ### Backup diário externo e criptografado
 

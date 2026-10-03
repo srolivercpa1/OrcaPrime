@@ -4,6 +4,7 @@ services:
     name: orcaprime-web
     runtime: docker
     plan: free
+    region: ohio
     branch: feat/orcaprime-web-1.0
     dockerfilePath: ./webapp/Dockerfile
     dockerContext: .
