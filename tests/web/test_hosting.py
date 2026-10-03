@@ -162,4 +162,5 @@ def test_cli_encryption_requires_key_and_does_not_modify_source(empty_url, tmp_p
     finally:
         event.remove(Engine, 'before_cursor_execute', before)
     assert list((tmp_path / 'cli').glob('*.json.gz.enc'))
-    assert all(s.lstrip().upper().startswith('SELECT') for s in statements), statements
+    # PostgreSQL's driver also reads server settings using SHOW on first connect.
+    assert all(s.lstrip().upper().startswith(('SELECT', 'SHOW')) for s in statements), statements

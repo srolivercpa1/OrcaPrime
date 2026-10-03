@@ -28,6 +28,8 @@ def test_browser_owner_setup(tmp_path):
             page.get_by_role('link',name='Primeiro acesso do proprietário').click()
             page.locator('#setup-form').wait_for(state='visible')
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            folder=Path(os.environ.get('ORCAPRIME_SCREENSHOTS',str(tmp_path)));folder.mkdir(parents=True,exist_ok=True)
+            page.screenshot(path=str(folder/'orcaprime-primeiro-acesso.png'),full_page=True)
             page.get_by_label('Código de instalação').fill(token)
             page.get_by_label('Seu e-mail').fill('owner@example.test')
             page.get_by_label('Crie sua senha').fill('Private-password-123')
