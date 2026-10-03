@@ -7,6 +7,8 @@ Versão web independente, com layout inspirado na referência do Apex e identida
 - Empresas independentes, painel do proprietário para criar, bloquear, reativar e renovar assinaturas.
 - Usuários com perfis, revogação e exclusão; proteção do próprio administrador.
 - Painel com totais reais, menu lateral, formulários arredondados, rolagem e adaptação a celular.
+- Botões compactos de Nova OS e tema claro, escuro ou automático, salvo neste navegador.
+- Cadastro fiscal por empresa para NF-e, com validação de CNPJ numérico/alfanumérico e preferências de ambiente, série e numeração. Emissão ainda depende de integração.
 - Clientes, orçamentos, aprovação/conversão em OS, exclusão confirmada.
 - OS com estado de entrada, acessórios, técnico, prazo, diagnóstico, serviço executado, histórico e lista de entregues.
 - Fotos privadas em JPEG otimizado, logo persistente e PDFs de OS/garantia.
@@ -51,6 +53,18 @@ Restauração: pare o serviço, configure DATABASE_URL para um banco vazio e exe
 Esta versão implementa o fluxo básico descrito acima; não é uma cópia de todas as funções comerciais do Apex. Ainda não inclui PDV de vendas, emissão fiscal, cobrança automática, integração WhatsApp, recuperação de senha por e-mail, migração do banco Windows, sincronização desktop/web ou armazenamento externo de fotos. Relatórios financeiros têm filtro pela data de cadastro e exportação do período; gráficos históricos estão pendentes. Orçamentos e OS têm um valor total informado e consumo de peças separado; não há composição detalhada de mão de obra/itens no orçamento. Imprimir o PDF abre o diálogo do navegador/leitor e depende da impressora local.
 
 O bloqueio de assinatura desativa o acesso da empresa e invalida as sessões, sem apagar os dados. Exclusão de cliente também remove suas OS, fotos e orçamentos. Serviços já entregues mantêm a baixa de estoque; serviços não entregues devolvem as peças. Lançamentos financeiros independentes continuam preservados.
+
+## Tema e configuração fiscal
+
+Use **Tema** no topo do painel ou do login para escolher **Claro**, **Escuro** ou **Automático**. Automático acompanha a preferência do dispositivo. A escolha é local a cada navegador e continua após recarregar a página; não altera PDFs de OS e garantia.
+
+O administrador da empresa encontra o formulário em **Notas fiscais**. Preencha dados do emitente, endereço, UF, código IBGE, regime, ambiente, série e próximo número e clique em **Salvar dados fiscais**. É possível salvar um cadastro incompleto e continuar depois. CNPJ e CEP preenchidos precisam ser válidos; o código IBGE deve ter sete dígitos e o prefixo da UF. Essa validação não consulta a situação cadastral na Receita/SEFAZ.
+
+O cadastro fica no Neon, separado por empresa e preservado ao editar as configurações gerais ou a logo. `GET/PUT /api/fiscal` exige ADMIN; alterações exigem CSRF e geram auditoria. O perfil não é enviado em `/api/me` nem na lista de empresas. Nenhum certificado, senha ou token fiscal é aceito nesse formulário ou modelo.
+
+**Cadastro preenchido não significa emissão habilitada.** O estado da integração permanece “Não conectada” e `can_emit` é sempre falso. O ambiente começa em homologação. Série e próximo número são preferências para a futura integração; não reservam números, não geram XML, DANFE nem autorização fiscal. Para emitir, ainda é necessário implementar e validar a conexão com o emissor/SEFAZ, configurar as credenciais e o certificado por canal privado e confirmar o credenciamento da empresa. NFS-e requer integração própria.
+
+Referência do cálculo de CNPJ: [Receita Federal, Anexo XV da IN 2.229/2024](https://normas.receita.fazenda.gov.br/sijut2consulta/anexoOutros.action?idArquivoBinario=76204). Os dígitos verificadores aceitam o CNPJ numérico existente e o novo formato alfanumérico.
 
 ## Validação
 

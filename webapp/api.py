@@ -43,7 +43,7 @@ class UserChange(Input):
     password:str|None=Field(default=None,min_length=12,max_length=200)
 
 def user_json(u): return {'id':u.id,'name':u.name,'email':u.email,'role':u.role,'active':u.active}
-def company_json(c): return {'id':c.id,'name':c.name,'active':c.active,'expires':c.expires,'settings':c.settings}
+def company_json(c): return {'id':c.id,'name':c.name,'active':c.active,'expires':c.expires,'settings':{k:v for k,v in c.settings.items() if k!='fiscal'}}
 
 def create_app(database_url,secure_cookie=False,public_origin=None,setup_token=None):
     app=FastAPI(title='OrçaPrime Web',version='1.0',docs_url=None,redoc_url=None,openapi_url=None)
@@ -189,6 +189,8 @@ def create_app(database_url,secure_cookie=False,public_origin=None,setup_token=N
         x=target_user(db,u,id);preserve_admin(db,x);db.execute(delete(Session).where(Session.user_id==id));db.delete(x);audit(db,u,'EXCLUIR_USUARIO',id);return {'ok':True}
     from .setup import register as register_setup
     register_setup(app,db_dep,setup_token)
+    from .fiscal import register as register_fiscal
+    register_fiscal(app,db_dep,actor,require,audit)
     from .operations import register
     register(app,db_dep,actor,require,audit)
     static=Path(__file__).parent/'static'

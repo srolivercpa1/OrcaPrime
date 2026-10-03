@@ -31,6 +31,59 @@ def login(app,email):
     c.headers['X-CSRF-Token']=r.json()['csrf']
     return c
 
+def test_fiscal_settings_are_persistent_private_and_tenant_scoped(env):
+    app,owner=env
+    company(owner,'Loja A','a@example.com');company(owner,'Loja B','b@example.com')
+    a=login(app,'a@example.com');b=login(app,'b@example.com')
+    assert TestClient(app).get('/api/fiscal').status_code==401
+    assert owner.get('/api/fiscal').status_code==403
+    assert a.put('/api/settings',json={'name':'Loja A','warranty_text':'Garantia original'}).status_code==200
+    profile={'legal_name':'Loja A Ltda','cnpj':'12.abc.345/01de-35','state_registration':'123456789',
+             'tax_regime':'1','street':'Rua Principal','number':'10','district':'Centro',
+             'city':'Goiânia','state':'GO','municipality_code':'5208707','postal_code':'74000-000',
+             'environment':'production','series':2,'next_number':37}
+    response=a.put('/api/fiscal',json=profile)
+    assert response.status_code==200,response.text
+    data=response.json()
+    assert data['settings']['cnpj']=='12ABC34501DE35'
+    assert data['settings']['postal_code']=='74000000'
+    assert data['profile_complete'] is True
+    assert data['can_emit'] is False and data['integration']=='not_connected'
+    assert a.get('/api/fiscal').json()==data
+    assert b.get('/api/fiscal').json()['settings']['cnpj']==''
+    assert a.get('/api/settings').json()['warranty_text']=='Garantia original'
+    assert a.put('/api/settings',json={'name':'Loja A','warranty_text':'Nova garantia'}).status_code==200
+    assert a.get('/api/fiscal').json()==data
+    assert 'fiscal' not in a.get('/api/me').json()['company']['settings']
+    assert any(x['action']=='CONFIGURAR_FISCAL' for x in a.get('/api/audit').json())
+
+def test_fiscal_drafts_permissions_and_csrf(env):
+    app,owner=env;company(owner,'Loja A','a@example.com');a=login(app,'a@example.com')
+    for role in ('TECNICO','FINANCEIRO','ATENDIMENTO'):
+        email=role.lower()+'@example.com'
+        assert a.post('/api/users',json={'name':role,'email':email,'password':'Tenant-password-123','role':role}).status_code==200
+        user=login(app,email)
+        assert user.get('/api/fiscal').status_code==403
+        assert user.put('/api/fiscal',json={}).status_code==403
+    draft=a.put('/api/fiscal',json={'legal_name':'Rascunho'}).json()
+    assert draft['settings']['environment']=='homologation'
+    assert not draft['profile_complete'] and 'cnpj' in draft['missing_fields']
+    a.headers.pop('X-CSRF-Token')
+    assert a.put('/api/fiscal',json={}).status_code==403
+    assert a.get('/api/fiscal').json()==draft
+
+@pytest.mark.parametrize('invalid',[
+    {'cnpj':'11.111.111/1111-11'}, {'cnpj':'12ABC34501DE36'}, {'cnpj':'52998224725'},
+    {'state':'XX'}, {'state':'GO','municipality_code':'3550308'}, {'postal_code':'123'},
+    {'environment':'live'}, {'series':1000}, {'next_number':0}, {'next_number':1.5},
+    {'certificate_password':'must-never-be-stored'}, {'company_id':'another-company'},
+])
+def test_fiscal_rejects_invalid_values_and_credentials(env,invalid):
+    app,owner=env;company(owner,'Loja A','a@example.com');a=login(app,'a@example.com')
+    before=a.get('/api/fiscal').json()
+    assert a.put('/api/fiscal',json=invalid).status_code==422
+    assert a.get('/api/fiscal').json()==before
+
 def test_sessions_isolation_and_suspension(env):
     app,owner=env
     a=company(owner,'Loja A','a@example.com'); company(owner,'Loja B','b@example.com')

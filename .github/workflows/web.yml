@@ -42,7 +42,7 @@ jobs:
             const owner = context.repo.owner, repo = context.repo.repo;
             try { await github.rest.git.getRef({owner, repo, ref: 'heads/' + branch}); }
             catch (e) { if (e.status !== 404) throw e; await github.rest.git.createRef({owner, repo, ref: 'refs/heads/' + branch, sha: context.sha}); }
-            for (const name of ['orcaprime-login.png', 'orcaprime-painel.png', 'orcaprime-celular.png', 'orcaprime-primeiro-acesso.png']) {
+            for (const name of ['orcaprime-login.png', 'orcaprime-painel.png', 'orcaprime-celular.png', 'orcaprime-primeiro-acesso.png', 'orcaprime-painel-escuro.png', 'orcaprime-fiscal-escuro.png', 'orcaprime-fiscal-celular.png']) {
               const source = 'web-preview/' + name;
               if (!fs.existsSync(source)) continue;
               const path = 'docs/web-preview/' + name;

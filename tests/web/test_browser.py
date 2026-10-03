@@ -27,6 +27,8 @@ def test_browser_owner_setup(tmp_path):
             page.goto(f'http://127.0.0.1:{port}')
             page.get_by_role('link',name='Primeiro acesso do proprietário').click()
             page.locator('#setup-form').wait_for(state='visible')
+            page.get_by_label('Tema',exact=True).select_option('dark')
+            assert page.locator('html').get_attribute('data-theme')=='dark'
             assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             folder=Path(os.environ.get('ORCAPRIME_SCREENSHOTS',str(tmp_path)));folder.mkdir(parents=True,exist_ok=True)
             page.screenshot(path=str(folder/'orcaprime-primeiro-acesso.png'),full_page=True)
@@ -80,6 +82,7 @@ def test_browser_workflow(tmp_path):
         with sync_playwright() as p:
             browser=p.chromium.launch(channel=os.environ.get('ORCAPRIME_BROWSER_CHANNEL'),args=['--no-sandbox'])
             page=browser.new_page(viewport={'width':1366,'height':900})
+            page.emulate_media(color_scheme='light')
             errors=[];page.on('pageerror',lambda e:errors.append(str(e)))
             page.goto(f'http://127.0.0.1:{port}')
             page.get_by_role('heading',name='Acesse sua conta').wait_for()
@@ -90,7 +93,53 @@ def test_browser_workflow(tmp_path):
             left=page.locator('.main-column').bounding_box();right=page.locator('.dashboard aside').bounding_box()
             assert right['x']>=left['x']+left['width']
             page.screenshot(path=str(folder/'orcaprime-painel.png'),full_page=True)
+            page.get_by_label('Tema',exact=True).select_option('dark')
+            page.reload();page.get_by_role('heading',name='Visão geral').wait_for()
+            assert page.locator('html').get_attribute('data-theme')=='dark'
+            assert page.get_by_label('Tema',exact=True).input_value()=='dark'
+            page.set_viewport_size({'width':1024,'height':900})
+            new_os=page.get_by_role('button',name='Nova ordem de serviço',exact=True).bounding_box()
+            assert new_os['width']<150 and new_os['height']<=40
+            page.set_viewport_size({'width':1366,'height':900})
+            page.screenshot(path=str(folder/'orcaprime-painel-escuro.png'),full_page=True)
+            page.get_by_role('button',name='Notas fiscais',exact=True).click()
+            page.get_by_label('Razão social',exact=True).fill('Oficina de teste Ltda')
+            page.get_by_label('CNPJ',exact=True).fill('11.111.111/1111-11')
+            page.get_by_role('button',name='Salvar dados fiscais').click()
+            page.locator('#fiscal-error').wait_for(state='visible')
+            for name,value in {'cnpj':'11.222.333/0001-81','street':'Rua Principal','number':'10',
+                               'district':'Centro','city':'São Paulo','municipality_code':'3550308',
+                               'postal_code':'01001-000','next_number':'37'}.items():
+                page.locator(f'[name={name}]').fill(value)
+            page.get_by_label('UF',exact=True).select_option('SP')
+            page.get_by_label('Regime tributário (CRT)',exact=True).select_option('1')
+            page.get_by_label('Ambiente',exact=True).select_option('production')
+            page.get_by_role('button',name='Salvar dados fiscais').click()
+            page.get_by_text('Cadastro fiscal preenchido',exact=True).wait_for()
+            page.get_by_role('button',name='Início',exact=True).click()
+            page.get_by_role('heading',name='Visão geral').wait_for()
+            page.get_by_role('button',name='Notas fiscais',exact=True).click()
+            page.get_by_text('Cadastro fiscal preenchido',exact=True).wait_for()
+            assert page.get_by_label('CNPJ',exact=True).input_value()=='11222333000181'
+            assert page.get_by_label('Próximo número da NF-e',exact=True).input_value()=='37'
+            page.get_by_text('Não conectada',exact=True).wait_for()
+            page.screenshot(path=str(folder/'orcaprime-fiscal-escuro.png'),full_page=True)
+            page.set_viewport_size({'width':390,'height':844})
+            assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+            page.screenshot(path=str(folder/'orcaprime-fiscal-celular.png'),full_page=True)
+            page.set_viewport_size({'width':1366,'height':900})
+            page.get_by_label('Tema',exact=True).select_option('light')
+            assert page.locator('html').get_attribute('data-theme')=='light'
+            page.get_by_label('Tema',exact=True).select_option('system')
+            page.emulate_media(color_scheme='dark')
+            page.wait_for_function("document.documentElement.dataset.theme === 'dark'")
+            page.emulate_media(color_scheme='light')
+            page.wait_for_function("document.documentElement.dataset.theme === 'light'")
+            page.get_by_label('Tema',exact=True).select_option('dark')
+            page.get_by_role('button',name='Início',exact=True).click()
+            page.get_by_role('heading',name='Visão geral').wait_for()
             page.get_by_role('button',name='Cadastrar cliente',exact=True).click()
+            assert page.locator('dialog').evaluate("e => getComputedStyle(e).backgroundColor")=='rgb(20, 32, 51)'
             page.locator('[name=name]').fill('Cliente de teste <script>');page.locator('[name=phone]').fill('64999999999');page.get_by_role('button',name='Salvar cadastro').click()
             page.locator('dialog').wait_for(state='hidden')
             page.get_by_role('button',name='Nova ordem de serviço',exact=True).click()
