@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#087dce"><meta name="robots" content="noindex,nofollow">
+  <title>Primeiro acesso • OrçaPrime</title>
+  <link rel="icon" href="/brand.png"><script src="/static/theme.js"></script><link rel="stylesheet" href="/static/app.css"><link rel="stylesheet" href="/static/theme.css">
+  <script defer src="/static/setup.js"></script>
+</head>
+<body>
+<main class="auth-page">
+  <section class="auth-art">
+    <div class="brand"><img src="/brand.png" alt=""><div>Orça<em>Prime</em><small>GESTÃO DA ASSISTÊNCIA</small></div></div>
+    <h1>Seu negócio.<br>Seu controle.<br>Seu OrçaPrime.</h1>
+    <p>Configure seu acesso de proprietário e comece a organizar suas empresas e licenças.</p>
+    <p>OrçaPrime Web 1.0 · Sketch Inc</p>
+  </section>
+  <div class="auth-form">
+    <label class="theme-picker"><span>Tema</span><select data-theme-select aria-label="Tema"><option value="system">Automático</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label>
+    <div class="eyebrow">PRIMEIRO ACESSO</div>
+    <h2>Configure sua conta</h2>
+    <p class="subtitle" id="setup-status" role="status">Verificando a instalação…</p>
+    <form id="setup-form" hidden>
+      <div class="error" id="setup-error" role="alert"></div>
+      <label class="field">Código de instalação<input type="password" name="token" autocomplete="off" minlength="32" maxlength="512" required></label>
+      <label class="field">Seu e-mail<input type="email" name="email" autocomplete="username" maxlength="254" required></label>
+      <label class="field">Crie sua senha<div class="password"><input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="200" required><button type="button" id="show-password" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12 M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg></button></div></label>
+      <label class="field">Confirme sua senha<input type="password" name="confirm" autocomplete="new-password" minlength="12" maxlength="200" required></label>
+      <p class="muted">Use pelo menos 12 caracteres. Guarde a senha em um local seguro.</p>
+      <button class="primary" type="submit">Criar conta do proprietário</button>
+    </form>
+    <a class="link" href="/">Voltar para o login</a>
+    <div class="auth-foot">Software pago · Desenvolvido por Sketch Inc</div>
+  </div>
+</main>
+</body>
+</html>
