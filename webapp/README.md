@@ -61,6 +61,8 @@ A CI web testa também PostgreSQL, instala o navegador de teste e verifica naveg
 
 ## Hospedagem gratuita: Render + Neon
 
+Instalação publicada: [OrçaPrime Web 1.0](https://orcaprime-web.onrender.com). Primeiro acesso em [/setup](https://orcaprime-web.onrender.com/setup), com o código privado `SETUP_TOKEN` em Environment do [serviço Render](https://dashboard.render.com/web/srv-db0heemgekts739niug0). O proprietário escolhe seu próprio e-mail e senha; não há credencial padrão. O backup externo diário ainda aguarda configuração dos Secrets e ativação do workflow na branch principal.
+
 O arquivo `render.yaml` cria **somente um Web Service gratuito**, sem disco ou PostgreSQL do Render. O banco externo Neon guarda registros, fotos e logotipos. A aplicação continua na versão 1.0. O Render pode suspender o serviço por inatividade; o primeiro acesso pode demorar. As cotas de banco, transferência e execução dos provedores precisam ser acompanhadas.
 
 1. No Neon, utilize o projeto exclusivo do OrçaPrime Web existente ou crie um para uma nova instalação. A configuração Render usa Ohio; mantenha o banco próximo do serviço. Prepare as tabelas com a conta de administração e use uma conexão PostgreSQL com `sslmode=require` de um usuário restrito à aplicação em `DATABASE_URL`.
